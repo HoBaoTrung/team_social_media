@@ -75,7 +75,7 @@ class MessageDropdown {
 
     positionDropdown() {
         // Only apply custom positioning on desktop, let CSS handle mobile
-        if (window.innerWidth > 576) {
+        if (window.innerWidth > 768) {
             const rect = this.messageIcon.getBoundingClientRect();
             const dropdownRect = this.messageDropdown.getBoundingClientRect();
             let top = rect.bottom + 12;
@@ -87,12 +87,14 @@ class MessageDropdown {
             this.messageDropdown.style.width = '360px';
             this.messageDropdown.style.position = 'absolute';
         } else {
-            // Reset inline styles for mobile, let CSS take over
+            // Reset inline styles for mobile, let CSS take over completely
             this.messageDropdown.style.top = '';
             this.messageDropdown.style.right = '';
             this.messageDropdown.style.left = '';
             this.messageDropdown.style.width = '';
             this.messageDropdown.style.position = '';
+            this.messageDropdown.style.maxWidth = '';
+            this.messageDropdown.style.maxHeight = '';
         }
     }
 
