@@ -48,6 +48,13 @@ class MessageDropdown {
                 this.closeDropdown();
             }
         });
+
+        // Handle window resize to reposition dropdown
+        window.addEventListener('resize', () => {
+            if (this.isOpen) {
+                this.positionDropdown();
+            }
+        });
     }
 
     toggleDropdown() {
@@ -67,13 +74,26 @@ class MessageDropdown {
     }
 
     positionDropdown() {
-        const rect = this.messageIcon.getBoundingClientRect();
-        const dropdownRect = this.messageDropdown.getBoundingClientRect();
-        let top = rect.bottom + 12;
-        let right = window.innerWidth - rect.right;
-        if (right + dropdownRect.width > window.innerWidth) right = 16;
-        this.messageDropdown.style.top = `${top}px`;
-        this.messageDropdown.style.right = `${right}px`;
+        // Only apply custom positioning on desktop, let CSS handle mobile
+        if (window.innerWidth > 576) {
+            const rect = this.messageIcon.getBoundingClientRect();
+            const dropdownRect = this.messageDropdown.getBoundingClientRect();
+            let top = rect.bottom + 12;
+            let right = window.innerWidth - rect.right;
+            if (right + dropdownRect.width > window.innerWidth) right = 16;
+            this.messageDropdown.style.top = `${top}px`;
+            this.messageDropdown.style.right = `${right}px`;
+            this.messageDropdown.style.left = 'auto';
+            this.messageDropdown.style.width = '360px';
+            this.messageDropdown.style.position = 'absolute';
+        } else {
+            // Reset inline styles for mobile, let CSS take over
+            this.messageDropdown.style.top = '';
+            this.messageDropdown.style.right = '';
+            this.messageDropdown.style.left = '';
+            this.messageDropdown.style.width = '';
+            this.messageDropdown.style.position = '';
+        }
     }
 
     async loadContacts() {
