@@ -91,20 +91,21 @@ function loadMoreFriends() {
             data.content.forEach(function (friend) {
                 // Tạo HTML cho friendCard và friend-button-group
                 const friendCardHtml = `
-                    <div class="col-md-3">
-                        <div class="friend-action">
-                            <a href="/profile/${friend.username}" class="friend-card mt-2 mb-2 justify-content-center d-flex">
-                                <img class="mb-3" src="${friend.avatarUrl || '/images/default-avatar.jpg'}" alt="Avatar" />
-                                <div class="friend-info">
-                                    <h5 class="name-list-friend" title="${friend.fullName}">${friend.fullName}</h5>
-                                    <h7>${friend.mutualFriends} bạn chung</h7>
-                                </div>
-                            </a>
-                            <div class="friend-button-group" id="btn-group-${friend.username}"></div>
-                            <div class="chat-button-group" id="chat-btn-${friend.username}"></div>
-                        </div>
-                    </div>
-                `;
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="friend-card mt-2 mb-2">
+            <a href="/profile/${friend.username}">
+                <img src="${friend.avatarUrl || '/images/default-avatar.jpg'}" alt="Avatar" />
+            </a>
+            <div class="friend-info">
+                <h5 class="name-list-friend" title="${friend.fullName}">${friend.fullName}</h5>
+                <h7>${friend.mutualFriends} bạn chung</h7>
+            </div>
+            <div class="friend-button-group" id="btn-group-${friend.username}"></div>
+            <div class="chat-button-group" id="chat-btn-${friend.username}"></div>
+        </div>
+    </div>
+`;
+
                 $('#friends-list').append(friendCardHtml);
 
                 if (isAddBtnActionFriend) {

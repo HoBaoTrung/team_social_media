@@ -1,145 +1,89 @@
-
+/* ========== Card bạn bè ========== */
 .friend-card {
-    background-color: #e0e0e0; /* xám nhẹ */
-    border-radius: 8px;
-    padding: 12px 8px;
-    transition: all 0.3s ease;
-    color: #111;
-    text-decoration: none;
-    display: block;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+    transition: box-shadow 0.2s, transform 0.2s;
+    text-align: center;
+    display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 100%;
+    padding: 16px;
+    height: 100%; /* giúp card full chiều cao của col */
 }
 
-.name-profile {
-    margin: 0;
-    font-size: 1.2rem;
-    max-width: 110px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.name-list-friend {
-    margin: 0;
-    font-size: 1.2rem;
-    max-width: 160px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-
-.friend-card img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    /*margin-right: 15px;*/
-}
 .friend-card:hover {
-    background-color: #000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.friend-card:hover *{
-    color: #fff !important;
+/* Avatar trong card */
+.friend-card img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    object-fit: cover;
+}
+
+/* Tên */
+.name-list-friend {
+    font-size: 15px;
+    font-weight: 600;
+    color: #050505;
+    margin: 8px 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .friend-info {
-    flex-grow: 1;
+    margin-bottom: 8px;
 }
 
-.friend-info h5 {
-    margin: 0;
-    font-size: 1.2rem;
+/* Nhóm nút */
+.friend-button-group,
+.chat-button-group {
+    margin-top: 6px;
+    text-align: center;
 }
 
-.friend-info p {
-    margin: 5px 0 0;
-    color: #666;
+/* Container danh sách bạn bè */
+#friends-list {
+    margin-top: 16px;
 }
+
+/* Đảm bảo spacing cho cột Bootstrap */
+#friends-list .col-6,
+#friends-list .col-md-4,
+#friends-list .col-lg-3 {
+    margin-bottom: 16px;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    .friend-card img {
+        width: 70px;
+        height: 70px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .friend-card img {
+        width: 100px;
+        height: 100px;
+    }
+}
+
 body {
     background-color: #f0f2f5;
     font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-/* Sidebar giống Facebook */
-.sidebar {
-    padding-top: 20px;
-}
-.sidebar h2 {
-    font-size: 20px;
-    font-weight: 600;
-    color: #050505;
-    margin-bottom: 15px;
-}
-.sidebar .list-group-item {
-    border: none;
-    padding: 12px 16px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #050505;
-}
-.sidebar .list-group-item.active {
-    background-color: #e7f3ff;
-    color: #1877f2;
-    border-radius: 8px;
-    font-weight: 600;
-}
-.sidebar .list-group-item:hover {
-    background-color: #f2f2f2;
-    border-radius: 8px;
-}
-
-/* Danh sách bạn bè */
-#list-title {
-    font-size: 22px;
-    font-weight: 600;
-    color: #050505;
-    text-align: left;
-    margin-bottom: 20px;
-    background: none !important;
-}
-
-.friend-action {
-    border: none;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 20px;
-    background-color: #fff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    transition: box-shadow 0.2s ease-in-out;
-}
-.friend-action:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-/* Grid giống FB */
-#friends-list .col-md-3 {
-    margin-bottom: 20px;
-}
-
-/* Avatar + tên trong card */
-.name-list-friend {
-    font-size: 15px;
-    font-weight: 600;
-    color: #050505;
-    margin-top: 10px;
-}
-
-/* Nút hành động giống FB */
-.friend-action button {
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 6px 12px;
-}
-
-.loading {
-    text-align: center;
-    display: none;
-    margin: 20px 0;
-    font-size: 15px;
-    color: #65676b;
+.main-content {
+    padding-top: 60px; /* tránh bị navbar đè */
 }

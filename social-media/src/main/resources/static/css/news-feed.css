@@ -680,3 +680,6 @@ header {
         height: auto;
     }
 }
+body {
+    padding: 0;
+}

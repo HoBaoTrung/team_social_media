@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     <title>Danh sách bạn bè</title>
     <th:block th:replace="fragments/chat-fragment :: chatResources"></th:block>
@@ -9,6 +10,7 @@
 </head>
 <body>
 <div th:replace="~{fragments/common/header :: header}"></div>
+<div class="main-content">
 <div class="container my-4">
     <div class="row">
         <!-- Sidebar -->
@@ -34,9 +36,7 @@
             <input type="hidden" id="targetUserId" th:value="${targetUserId}" />
 
             <h2 id="list-title" th:text="${listTitle}">Danh sách bạn bè</h2>
-            <div class="row" id="friends-list">
-
-            </div>
+            <div class="row" id="friends-list"></div>
 
             <div class="loading" id="loading">
                 <i class="fas fa-spinner fa-spin"></i> Đang tải...
@@ -45,7 +45,7 @@
     </div>
 </div>
 <div th:replace="fragments/chat-fragment :: chatContainers"></div>
-
+</div>
 <script th:src="@{/js/load-friend.js}"></script>
 <script th:src="@{/js/friend-button.js}"></script>
 
