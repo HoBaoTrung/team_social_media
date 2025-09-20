@@ -1517,20 +1517,27 @@ class PostManager {
                     const li = document.createElement("li");
                     li.className = `mention-item ${i === 0 ? 'selected' : ''}`;
                     li.innerHTML = `
-                        <img src="${user.avatarUrl || '/images/default-avatar.png'}" 
-                             alt="${user.fullName}" class="mention-avatar">
-                        <span class="mention-name">${user.fullName}</span>
-                    `;
+                    <img src="${user.avatarUrl || '/images/default-avatar.png'}" 
+                         alt="${user.fullName}" class="mention-avatar">
+                    <span class="mention-name">${user.fullName}</span>
+                `;
                     li.onclick = () => addMention(postId, user, inputElement, key);
                     if (dropdown) dropdown.appendChild(li);
                 });
 
                 if (users.length > 0 && dropdown) {
+                    // Move dropdown to body to avoid clipping
+                    if (dropdown.parentNode !== document.body) {
+                        document.body.appendChild(dropdown);
+                    }
+
+                    // Calculate position relative to input
+                    const rect = inputElement.getBoundingClientRect();
                     dropdown.style.position = 'absolute';
                     dropdown.style.zIndex = '10000';
-                    dropdown.style.top = `${inputElement.offsetHeight}px`;
-                    dropdown.style.left = `0px`;
-                    dropdown.style.width = `${inputElement.offsetWidth}px`;
+                    dropdown.style.top = `${rect.top + rect.height + window.scrollY - 45 }px`;
+                    dropdown.style.left = `${rect.left + window.scrollX}px`;
+                    dropdown.style.width = `${rect.width}px`;
                     dropdown.style.display = "block";
                 } else {
                     if (dropdown) dropdown.style.display = "none";
