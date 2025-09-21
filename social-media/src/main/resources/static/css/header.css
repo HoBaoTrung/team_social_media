@@ -115,7 +115,7 @@
 .nav-item:hover {
     background-color: #eddddd;
     text-decoration: none;
-    color: var(--text-primary);
+    color: black;
 }
 
 .nav-item i {
