@@ -11,6 +11,10 @@ import com.codegym.socialmedia.service.chat.ChatService;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -96,33 +100,38 @@ public class ChatController {
     // API lấy danh sách cuộc trò chuyện cho dropdown
     @GetMapping("/api/conversations")
     @ResponseBody
-    public ResponseEntity<List<ConversationDto>> getConversations() {
+    public ResponseEntity<Page<ConversationDto>> getConversations(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size){
         Long me = userService.getCurrentUser().getId();
-        return ResponseEntity.ok(chatService.getConversationsForUser(me));
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ConversationDto> conversations = chatService.getConversationsForUser(me, pageable);
+        return ResponseEntity.ok(conversations);
     }
 
     // API lấy bạn bè online cho sidebar
     @GetMapping("/api/chat/online-friends")
     @ResponseBody
-    public ResponseEntity<List<ConversationDto>> getOnlineFriends() {
+    public ResponseEntity<Page<ConversationDto>> getOnlineFriends(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long me = userService.getCurrentUser().getId();
-        return ResponseEntity.ok(chatService.getOnlineFriends(me));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ConversationDto> onlineFriends = chatService.getOnlineFriends(me, pageable);
+        return ResponseEntity.ok(onlineFriends);
     }
 
-    // bạn bè + nhóm của tôi
+    // nhóm của tôi
     @GetMapping("/api/chat/contacts")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getContacts() {
         Long me = userService.getCurrentUser().getId();
         Map<String, Object> res = new HashMap<>();
 
-        // Lấy bạn bè online
-        List<ConversationDto> onlineFriends = chatService.getOnlineFriends(me);
-
         // Lấy groups với thông tin đầy đủ
         List<ConversationDto> groups = chatService.getGroupsForUser(me);
 
-        res.put("friends", onlineFriends);
         res.put("groups", groups);
 
         return ResponseEntity.ok(res);

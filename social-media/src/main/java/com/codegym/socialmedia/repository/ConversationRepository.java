@@ -1,6 +1,8 @@
 package com.codegym.socialmedia.repository;
 
 import com.codegym.socialmedia.model.conversation.Conversation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,7 +20,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
         WHERE p.user.id = :userId AND p.isActive = true
         ORDER BY c.lastMessageAt DESC NULLS LAST, c.createdAt DESC
     """)
-    List<Conversation> findConversationsByUserId(@Param("userId") Long userId);
+    Page<Conversation> findConversationsByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query("""
         SELECT DISTINCT c FROM Conversation c 
@@ -26,7 +28,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
         WHERE p.user.id = :userId AND p.isActive = true and c.conversationType = 'PRIVATE'
         ORDER BY c.lastMessageAt DESC NULLS LAST, c.createdAt DESC
     """)
-    List<Conversation> findPrivateConversationsByUserId(@Param("userId") Long userId);
+    Page<Conversation> findPrivateConversationsByUserId(@Param("userId") Long userId, Pageable pageable);
 
     @Query("""
         SELECT c FROM Conversation c 

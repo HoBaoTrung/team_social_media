@@ -1,6 +1,7 @@
 let stompClient = null;
 let chatManager = null;
 let isSubscribed = false;
+
 function getCurrentUserId() {
     return (
         document.querySelector('meta[name="user-id"]')?.content ||
@@ -15,7 +16,7 @@ class ChatManager {
         this.chatBubbles = new Map();
         this.conversationCache = new Map();
         this.pendingFiles = {};
-        this.subscriptions = new Map(); // Track subscriptions per conversation
+        this.subscriptions = new Map();
         this.currentPages = new Map();
         this.hasMore = new Map();
         this.isLoadingHistory = new Map();
@@ -43,30 +44,18 @@ class ChatManager {
         }
     }
 
-    setupGlobalListeners() {
-        document.addEventListener('click', (e) => {
-            const dd = document.getElementById('messageDropdown');
-            const icon = document.getElementById('messageIcon');
-            if (dd && icon && !dd.contains(e.target) && !icon.contains(e.target)) {
-                dd.classList.remove('show');
-            }
-        });
-    }
+    setupGlobalListeners() {}
 
     async loadActivityStatus(conversationId) {
         try {
-            // Lấy thông tin participants để tìm user khác (trong private chat)
             const response = await fetch(`/api/chat/conversation/${conversationId}/participants`);
             const participants = await response.json();
-
             const currentUserId = getCurrentUserId();
             const otherUser = participants.find(p => p.id != currentUserId);
 
             if (otherUser) {
-                // Gọi API để lấy trạng thái activity
                 const activityResponse = await fetch(`/api/activity/status/${otherUser.id}`);
                 const activityData = await activityResponse.json();
-
                 const statusEl = document.getElementById(`chat-status-${conversationId}`);
                 if (statusEl) {
                     statusEl.textContent = activityData.lastActivity;
@@ -82,7 +71,6 @@ class ChatManager {
         }
     }
 
-    // Thêm method để update activity status realtime
     updateActivityStatus(conversationId, isOnline, lastActivity) {
         const statusEl = document.getElementById(`chat-status-${conversationId}`);
         if (statusEl) {
@@ -135,15 +123,13 @@ class ChatManager {
         await this.loadHistory(domKey, 0, true);
 
         if (chatType === 'group') this.loadGroupParticipants(domKey);
-
-        // Subscribe to the conversation topic for real-time messages
         this.subscribeToConversation(domKey);
     }
 
     async markConversationAsRead(conversationId) {
         try {
             await fetch(`/api/chat/mark-read/${conversationId}/${getCurrentUserId()}`, { method: 'POST' });
-            await fetchTotalUnread(); // reload danh sách + badge
+            await fetchTotalUnread();
         } catch (e) {
             console.error('Error marking as read:', e);
         }
@@ -177,7 +163,6 @@ class ChatManager {
             badge.style.display = 'none';
         });
 
-        // Subscribe to the conversation topic for real-time messages
         this.subscribeToConversation(id);
         await this.markConversationAsRead(id);
     }
@@ -187,7 +172,6 @@ class ChatManager {
             console.warn('Stomp client not connected');
             return;
         }
-        // Avoid duplicate subscriptions if already subscribed
         if (this.subscriptions.has(conversationId)) {
             console.log(`Already subscribed to conversation ${conversationId}`);
             return;
@@ -196,15 +180,15 @@ class ChatManager {
             const messageData = JSON.parse(message.body);
             this.handleIncomingMessage(messageData);
         });
-        this.subscriptions.set(conversationId, sub); // Store the subscription
+        this.subscriptions.set(conversationId, sub);
     }
 
     async findOrCreateConversation(targetUserId) {
         try {
             const res = await fetch('/api/chat/find-or-create-conversation', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-                body: JSON.stringify({targetUserId: parseInt(targetUserId)})
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ targetUserId: parseInt(targetUserId) })
             });
             const result = await res.json();
             return result.success ? result.conversation : null;
@@ -222,49 +206,44 @@ class ChatManager {
         wrap.setAttribute('data-conversation-type', type);
 
         wrap.innerHTML = `
-  <div class="chat-header ${type === 'group' ? 'is-group' : ''}">
-    <div class="chat-user">
-      <img class="chat-avatar ${type === 'group' ? 'group' : ''}" src="${avatar || (type === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg')}" alt="${name}">
-      <div class="meta">
-        <div class="name">${name || ''}</div>
-        <div class="sub" id="chat-status-${chatId}">${type === 'group' ? 'Nhóm' : 'Đang kiểm tra...'}</div>
-      </div>
-    </div>
-    <div class="chat-ctl"> 
-      <button class="chat-btn" title="Thu nhỏ" onclick="chatManager.minimizeChat('${chatId}')"><i class="fa-solid fa-minus"></i></button>
-      <button class="chat-btn" title="Đóng" onclick="chatManager.closeChat('${chatId}')"><i class="fa-solid fa-xmark"></i></button>
-      ${type === 'group'
-            ? `<button class="chat-btn" title="Đổi ảnh nhóm" onclick="chatManager.changeGroupAvatar('${chatId}')"><i class="fa-solid fa-image"></i></button>`
-            : ``}
-      <button class="chat-btn" title="Video call"  onclick="chatManager.toggleVideo('${chatId}')"><i class="fa-solid fa-video"></i></button>
-     </div>
-  </div>
-  <div class="chat-messages" id="messages-${chatId}">
-  </div>
-  <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
-  <div class="chat-input">
-    <div class="input-wrap">
-      <textarea id="input-${chatId}" rows="1" placeholder="Nhập tin nhắn... ${type === 'group' ? '(Dùng @ để tag)' : ''}"
-        data-chat-type="${type}"
-        oninput="chatManager.handleInput(event, '${chatId}')"
-        onkeydown="chatManager.handleKeyDown(event, '${chatId}')"
-        onkeypress="chatManager.handleKeyPress(event,'${chatId}')"></textarea>
-      <div class="input-icons">
-        <i class="fa-regular fa-face-smile input-icon" onclick="chatManager.toggleEmoji('${chatId}')"></i>
-        <i class="fa-solid fa-paperclip input-icon" onclick="chatManager.attachFile('${chatId}')"></i>
-        <i class="fa-solid fa-paper-plane input-icon" onclick="chatManager.sendMessage('${chatId}')"></i>
-      </div>
-    </div>
-    <div class="file-preview-box" id="preview-${chatId}"></div>
-  </div>
-  <emoji-picker id="emojiPicker-${chatId}" class="emoji-popup" style="display:none;"></emoji-picker>
-`;
+            <div class="chat-header ${type === 'group' ? 'is-group' : ''}">
+                <div class="chat-user">
+                    <img class="chat-avatar ${type === 'group' ? 'group' : ''}" src="${avatar || (type === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg')}" alt="${name}">
+                    <div class="meta">
+                        <div class="name">${name || ''}</div>
+                        <div class="sub" id="chat-status-${chatId}">${type === 'group' ? 'Nhóm' : 'Đang kiểm tra...'}</div>
+                    </div>
+                </div>
+                <div class="chat-ctl"> 
+                    <button class="chat-btn" title="Thu nhỏ" onclick="chatManager.minimizeChat('${chatId}')"><i class="fa-solid fa-minus"></i></button>
+                    <button class="chat-btn" title="Đóng" onclick="chatManager.closeChat('${chatId}')"><i class="fa-solid fa-xmark"></i></button>
+                    ${type === 'group' ? `<button class="chat-btn" title="Đổi ảnh nhóm" onclick="chatManager.changeGroupAvatar('${chatId}')"><i class="fa-solid fa-image"></i></button>` : ``}
+                    <button class="chat-btn" title="Video call" onclick="chatManager.toggleVideo('${chatId}')"><i class="fa-solid fa-video"></i></button>
+                </div>
+            </div>
+            <div class="chat-messages" id="messages-${chatId}"></div>
+            <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
+            <div class="chat-input">
+                <div class="input-wrap">
+                    <textarea id="input-${chatId}" rows="1" placeholder="Nhập tin nhắn... ${type === 'group' ? '(Dùng @ để tag)' : ''}"
+                        data-chat-type="${type}"
+                        oninput="chatManager.handleInput(event, '${chatId}')"
+                        onkeydown="chatManager.handleKeyDown(event, '${chatId}')"
+                        onkeypress="chatManager.handleKeyPress(event,'${chatId}')"></textarea>
+                    <div class="input-icons">
+                        <i class="fa-regular fa-face-smile input-icon" onclick="chatManager.toggleEmoji('${chatId}')"></i>
+                        <i class="fa-solid fa-paperclip input-icon" onclick="chatManager.attachFile('${chatId}')"></i>
+                        <i class="fa-solid fa-paper-plane input-icon" onclick="chatManager.sendMessage('${chatId}')"></i>
+                    </div>
+                </div>
+                <div class="file-preview-box" id="preview-${chatId}"></div>
+            </div>
+            <emoji-picker id="emojiPicker-${chatId}" class="emoji-popup" style="display:none;"></emoji-picker>
+        `;
 
-        // Setup scroll listener for infinite scrolling
         const messagesBox = wrap.querySelector(`#messages-${chatId}`);
         messagesBox.addEventListener('scroll', () => this.handleScroll(chatId));
 
-        // Load activity status cho private chat
         if (type === 'private') {
             this.loadActivityStatus(chatId);
         }
@@ -337,7 +316,6 @@ class ChatManager {
         }
         if (this.pendingFiles[id]) delete this.pendingFiles[id];
 
-        // Unsubscribe from the conversation topic
         const sub = this.subscriptions.get(id);
         if (sub) {
             sub.unsubscribe();
@@ -378,11 +356,9 @@ class ChatManager {
         const input = document.getElementById(`input-${chatId}`);
         if (!input) return;
         const msg = (input.value || '').trim();
-
-        // Lấy file pending
         const files = this.pendingFiles[chatId] || [];
 
-        if (!msg && files.length === 0) return; // tránh gửi rỗng
+        if (!msg && files.length === 0) return;
 
         const formData = new FormData();
         formData.append("conversationId", chatId);
@@ -402,7 +378,6 @@ class ChatManager {
             const result = await res.json();
             if (!result.success) throw new Error(result.error);
 
-            // Clear input + preview + pending
             input.value = '';
             delete this.pendingFiles[chatId];
             const previewBox = document.getElementById(`preview-${chatId}`);
@@ -454,7 +429,7 @@ class ChatManager {
             for (let i = messages.length - 1; i >= 0; i--) {
                 const m = messages[i];
                 const type = String(m.senderId) === me ? 'sent' : 'received';
-                const sender = type === 'received' ? {name: m.senderName, avatar: m.senderAvatar} : null;
+                const sender = type === 'received' ? { name: m.senderName, avatar: m.senderAvatar } : null;
                 const row = this.createMessageRow(m, type, sender);
                 fragment.appendChild(row);
             }
@@ -488,16 +463,13 @@ class ChatManager {
 
         if (type === 'received' && sender) {
             row.innerHTML = `
-        <img class="message-avatar" src="${sender.avatar || '/images/default-avatar.jpg'}" alt="${sender.name}">
-        <div class="message-content" >
-            <div class="message-sender">${sender.name}</div>
-            ${el}
-        </div>`;
+                <img class="message-avatar" src="${sender.avatar || '/images/default-avatar.jpg'}" alt="${sender.name}">
+                <div class="message-content">
+                    <div class="message-sender">${sender.name}</div>
+                    ${el}
+                </div>`;
         } else {
-            row.innerHTML = `
-        <div class="message-content">
-            ${el}
-        </div>`;
+            row.innerHTML = `<div class="message-content">${el}</div>`;
         }
 
         return row;
@@ -515,7 +487,6 @@ class ChatManager {
     renderMessage(message) {
         let html = '';
 
-        // Render attachments (multiple supported)
         (message.attachments || []).forEach(att => {
             switch (att.type) {
                 case "IMAGE":
@@ -530,28 +501,25 @@ class ChatManager {
                 case "FILE":
                     const ext = att.attachmentUrl.split('.').pop().toLowerCase();
                     html += `
-                    <div class="message-file">
-                          <a href="${att.attachmentUrl}" download="${att.fileName}" class="file-link">
-                            <div class="file-icon ${ext}"></div>
-                            <div class="file-info">
-                              <div class="file-name">${att.fileName}</div>
-                              <div class="file-size">${att.fileSize}</div>
-                            </div>
-                          </a>
-                        </div>
-                                `;
+                        <div class="message-file">
+                            <a href="${att.attachmentUrl}" download="${att.fileName}" class="file-link">
+                                <div class="file-icon ${ext}"></div>
+                                <div class="file-info">
+                                    <div class="file-name">${att.fileName}</div>
+                                    <div class="file-size">${att.fileSize}</div>
+                                </div>
+                            </a>
+                        </div>`;
                     break;
                 default:
                     html += `<div class="message-unknown">[Unsupported attachment]</div>`;
             }
         });
 
-        // If CALL type without attachments/content
         if (message.type === "CALL" && !html) {
             html = `<div class="message-call"> Cuộc gọi: ${message.content || 'Không xác định'}</div>`;
         }
 
-        // Render content if present (TEXT or CALL description)
         if (message.content) {
             html += `<div class="message-text">${ChatManager.processMentions(message.content)}</div>`;
         }
@@ -562,28 +530,20 @@ class ChatManager {
     toggleVideo(conversation_id) {
         const url = `/video_call/${conversation_id}`;
         window.open(url, `VideoPopup${conversation_id}`, 'width=1070,height=600,resizable=yes,scrollbars=no');
-
-        // Send startCall to trigger invites (no need for isCaller here)
-        stompClient.send("/app/startCall", {}, JSON.stringify({
-            conversationId: conversation_id
-        }));
+        stompClient.send("/app/startCall", {}, JSON.stringify({ conversationId: conversation_id }));
     }
 
     toggleEmoji(chatId) {
         const picker = document.getElementById(`emojiPicker-${chatId}`);
         picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
 
-        // Chỉ gắn listener 1 lần
         if (!picker.dataset.bound) {
             picker.addEventListener('emoji-click', (event) => {
                 const emoji = event.detail.unicode;
                 const textarea = document.getElementById(`input-${chatId}`);
-
-                // Chèn vào đúng vị trí con trỏ
                 const start = textarea.selectionStart;
                 const end = textarea.selectionEnd;
                 const text = textarea.value;
-
                 textarea.value = text.slice(0, start) + emoji + text.slice(end);
                 textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
                 textarea.focus();
@@ -610,20 +570,16 @@ class ChatManager {
             }
             this.pendingFiles[chatId].push(...files);
 
-            // Hiển thị preview
             const previewBox = document.getElementById(`preview-${chatId}`);
             if (previewBox) {
                 previewBox.innerHTML = '';
 
                 files.forEach((f, index) => {
                     const ext = f.name.split('.').pop().toLowerCase();
-
-                    // Tạo khối preview
                     const div = document.createElement("div");
                     div.className = "file-preview";
 
                     let previewEl;
-
                     if (f.type.startsWith("image")) {
                         previewEl = document.createElement("img");
                         previewEl.src = URL.createObjectURL(f);
@@ -644,7 +600,6 @@ class ChatManager {
                         else if (["doc", "docx"].includes(ext)) iconPath = "/icons/word.png";
                         else if (["xls", "xlsx"].includes(ext)) iconPath = "/icons/excel.png";
                         else if (["zip", "rar", "7z"].includes(ext)) iconPath = "/icons/zip.png";
-
                         previewEl = document.createElement("img");
                         previewEl.src = iconPath;
                         previewEl.className = "file-icon";
@@ -672,44 +627,85 @@ class ChatManager {
         input.click();
     }
 
-    loadOnlineFriends() {
+    async loadOnlineFriends() {
         const el = document.getElementById('onlineFriendsList');
         if (!el) return;
 
-        fetch('/api/chat/online-friends')
-            .then(r => r.json())
-            .then(data => {
-                const friends = data;
-                if (!Array.isArray(friends)) {
-                    console.error('Invalid API response:', data);
-                    el.innerHTML = `<div class="text-center text-danger p-3">Dữ liệu không hợp lệ</div>`;
-                    return;
-                }
+        this.onlineCurrentPage = 0;
+        this.onlineHasMore = true;
+        this.onlineIsLoading = false;
+        el.innerHTML = '';
 
-                if (friends.length === 0) {
-                    el.innerHTML = `<div class="text-center p-3 text-muted">Không có bạn bè online</div>`;
-                    return;
-                }
+        this.loadMoreOnlineFriends();
 
-                el.innerHTML = friends.map(f => {
-                    const spanStyle = f.unreadCount && f.unreadCount > 0 ? '' : 'display: none;';
-                    return `<div class="friend-item-enhanced" 
-                   onclick="chatManager.openExistingConversation('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', '${f.type || 'private'}')">
-                <div style="position:relative">
-                  <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
-                  ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
-                </div>
-                <span class="friend-name">${this.escape(f.name)}</span>
-                <span class="badge bg-danger ms-2 span-conversation-id-${f.id}" style="${spanStyle}">
-                    ${f.unreadCount || ''}
-                </span>
-            </div>`;
-                }).join('');
-            })
-            .catch(error => {
-                console.error('Error fetching online friends:', error);
+        if (!el.dataset.scrollBound) {
+            el.addEventListener('scroll', () => this.handleOnlineScroll());
+            el.dataset.scrollBound = 'true';
+        }
+    }
+
+    handleOnlineScroll() {
+        const el = document.getElementById('onlineFriendsList');
+        if (this.onlineIsLoading || !this.onlineHasMore) return;
+        const { scrollTop, scrollHeight, clientHeight } = el;
+        if (scrollTop + clientHeight >= scrollHeight - 50) {
+            this.loadMoreOnlineFriends();
+        }
+    }
+
+    async loadMoreOnlineFriends() {
+        if (this.onlineIsLoading || !this.onlineHasMore) return;
+        this.onlineIsLoading = true;
+        const el = document.getElementById('onlineFriendsList');
+        const loader = document.createElement('div');
+        loader.className = 'text-center p-3';
+        loader.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+        el.appendChild(loader);
+
+        try {
+            const r = await fetch(`/api/chat/online-friends?page=${this.onlineCurrentPage}&size=20`);
+            if (!r.ok) throw new Error('Failed to load');
+            const data = await r.json();
+            const friends = data.content;
+
+            if (!Array.isArray(friends)) {
+                throw new Error('Invalid response');
+            }
+
+            el.removeChild(loader);
+
+            if (friends.length === 0 && this.onlineCurrentPage === 0) {
+                el.innerHTML = `<div class="text-center p-3 text-muted">Không có bạn bè online</div>`;
+                return;
+            }
+
+            const html = friends.map(f => {
+                const spanStyle = f.unreadCount && f.unreadCount > 0 ? '' : 'display: none;';
+                return `<div class="friend-item-enhanced" 
+                        onclick="chatManager.openExistingConversation('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', '${f.type || 'private'}')">
+                    <div style="position:relative">
+                      <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
+                      ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
+                    </div>
+                    <span class="friend-name">${this.escape(f.name)}</span>
+                    <span class="badge bg-danger ms-2 span-conversation-id-${f.id}" style="${spanStyle}">
+                        ${f.unreadCount || ''}
+                    </span>
+                </div>`;
+            }).join('');
+            el.innerHTML += html;
+
+            this.onlineHasMore = data.last === false;
+            this.onlineCurrentPage++;
+        } catch (error) {
+            console.error('Error fetching online friends:', error);
+            if (loader) el.removeChild(loader);
+            if (this.onlineCurrentPage === 0) {
                 el.innerHTML = `<div class="text-center text-danger p-3">Lỗi tải danh sách</div>`;
-            });
+            }
+        } finally {
+            this.onlineIsLoading = false;
+        }
     }
 
     handleInput(evt, convId) {
@@ -776,8 +772,7 @@ class ChatManager {
             this._mentionPool.set(conversationId, arr || []);
             const sub = document.querySelector(`#chat-${conversationId} .sub`);
             if (sub) sub.textContent = `${(arr || []).length} thành viên`;
-        } catch {
-        }
+        } catch {}
     }
 
     showMentionSuggestions(convId, query) {
@@ -796,15 +791,15 @@ class ChatManager {
         }
         const el = document.getElementById(`mentions-${convId}`);
         el.innerHTML = filtered.map((p, i) => `
-  <div class="mention-item ${i === 0 ? 'selected' : ''}" data-username="${p.username}" onclick="chatManager.selectMention('${convId}', this)">
-    <img class="mention-avatar" src="${p.avatar || '/images/default-avatar.jpg'}">
-    <div class="mention-info">
-      <div class="mention-name">${this.escape(p.fullName)}</div>
-      <div class="mention-username">@${this.escape(p.username || '')}</div>
-    </div>
-    ${p.role === 'ADMIN' ? '<i class="fa-solid fa-crown mention-admin"></i>' : ''}
-  </div>
-`).join('');
+            <div class="mention-item ${i === 0 ? 'selected' : ''}" data-username="${p.username}" onclick="chatManager.selectMention('${convId}', this)">
+                <img class="mention-avatar" src="${p.avatar || '/images/default-avatar.jpg'}">
+                <div class="mention-info">
+                    <div class="mention-name">${this.escape(p.fullName)}</div>
+                    <div class="mention-username">@${this.escape(p.username || '')}</div>
+                </div>
+                ${p.role === 'ADMIN' ? '<i class="fa-solid fa-crown mention-admin"></i>' : ''}
+            </div>
+        `).join('');
         el.style.display = 'block';
     }
 
@@ -917,100 +912,7 @@ class ChatManager {
     }
 }
 
-function bindHeaderDropdown() {
-    const icon = document.getElementById('messageIcon');
-    const dropdown = document.getElementById('messageDropdown');
-    const list = document.getElementById('conversationList');
-    if (!icon || !dropdown || !list) return;
-    let loaded = false;
-
-    const openDropdown = async () => {
-        dropdown.classList.add('show');
-        const rect = icon.getBoundingClientRect();
-        dropdown.style.top = `${rect.bottom + 8 + window.scrollY}px`;
-        dropdown.style.right = `${Math.max(16, window.innerWidth - rect.right)}px`;
-
-        if (!loaded) {
-            list.innerHTML = `<div class="text-center p-3"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>`;
-            try {
-                const r = await fetch('/api/conversations', {headers: {'X-Requested-With': 'XMLHttpRequest'}});
-                const data = await r.json();
-                if (!Array.isArray(data) || data.length === 0) {
-                    list.innerHTML = `<div class="text-center text-muted p-3">Chưa có cuộc trò chuyện</div>`;
-                    loaded = true;
-                    return;
-                }
-
-                list.innerHTML = data.map(c => `
-      <div class="conversation-item" data-id="${c.id}" data-type="${c.type}">
-        <img src="${c.avatar || (String(c.type).toLowerCase() === 'group' ? '/images/default-group-avatar.jpg' : '/images/default-avatar.jpg')}" alt="">
-        <div class="info">
-          <div class="conv-name">${c.name || ''}</div>
-          <div class="conv-sub">${c.lastMessage ? c.lastMessage : 'Chưa có tin nhắn'}${c.timeAgo ? ' · ' + c.timeAgo : ''}</div>
-        </div>
-        ${c.hasUnread ? `<span class="badge bg-danger">${c.unreadCount || ''}</span>` : ''}
-      </div>`).join('');
-
-                list.querySelectorAll('.conversation-item').forEach(el => {
-                    el.addEventListener('click', () => {
-                        const id = el.getAttribute('data-id');
-                        const type = el.getAttribute('data-type');
-                        const name = el.querySelector('.conv-name')?.textContent?.trim() || '';
-                        const avatar = el.querySelector('img')?.src || '';
-                        dropdown.classList.remove('show');
-                        if (chatManager) chatManager.openExistingConversation(id, name, avatar, type);
-                    });
-                });
-                loaded = true;
-            } catch (e) {
-                console.error(e);
-                list.innerHTML = `<div class="text-center text-danger p-3"><i class="fa-solid fa-triangle-exclamation me-1"></i> Lỗi tải danh sách</div>`;
-            }
-        }
-    };
-
-    const closeDropdown = () => dropdown.classList.remove('show');
-
-    icon.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (dropdown.classList.contains('show')) closeDropdown();
-        else openDropdown();
-    });
-
-    icon.setAttribute('tabindex', '0');
-    icon.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            if (dropdown.classList.contains('show')) closeDropdown();
-            else openDropdown();
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!dropdown.classList.contains('show')) return;
-        if (!dropdown.contains(e.target) && !icon.contains(e.target)) closeDropdown();
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeDropdown();
-    });
-
-    document.querySelectorAll("emoji-picker").forEach(picker => {
-        picker.addEventListener("emoji-click", event => {
-            const emoji = event.detail.unicode;
-            const input = picker.closest(".chat-input").querySelector("textarea");
-            input.value += emoji;
-
-            // Tự resize textarea nếu cần
-            input.dispatchEvent(new Event("input"));
-        });
-    });
-}
-
-// Nâng cao (để mở rộng sau): tạo nhóm qua modal, tìm user… (đang dùng các API có sẵn)
-class EnhancedChatManager extends ChatManager {
-}
+class EnhancedChatManager extends ChatManager {}
 
 function connectStompClient() {
     if (stompClient && stompClient.connected) return;
@@ -1022,7 +924,6 @@ function connectStompClient() {
         if (isSubscribed) return;
         isSubscribed = true;
 
-        // Existing subscriptions...
         stompClient.subscribe("/user/queue/unread", (message) => {
             if (chatManager) {
                 chatManager.handleUnreadMessage(JSON.parse(message.body));
@@ -1036,12 +937,10 @@ function connectStompClient() {
             window.open(url, `VideoPopup${invite.conversationId}`, 'width=1070,height=600,resizable=yes,scrollbars=no');
         });
 
-        // NEW: Subscribe to auto-open chat notifications
         stompClient.subscribe("/user/queue/auto-open-chat", (message) => {
             const data = JSON.parse(message.body);
             handleAutoOpenChat(data);
         });
-
     }, (error) => {
         console.error("Stomp connection error:", error);
     });
@@ -1055,7 +954,6 @@ function handleAutoOpenChat(data) {
         return;
     }
 
-    // Show mention notification first
     showMentionNotification({
         sender: {
             username: data.mentionedBy || 'Someone',
@@ -1064,12 +962,10 @@ function handleAutoOpenChat(data) {
         referenceId: data.conversationId
     });
 
-    // Auto-open the chat after a short delay
     setTimeout(() => {
         openMentionChat(data.conversationId);
-    }, 1000); // 1 second delay to let user see the notification
+    }, 1000);
 }
-
 
 function showMentionNotification(notification) {
     const toastHtml = `
@@ -1124,26 +1020,20 @@ function dismissMentionNotification(button) {
 
 async function openMentionChat(conversationId) {
     try {
-        // Get conversation details first
         const conversationResponse = await fetch(`/api/conversations`);
         const conversations = await conversationResponse.json();
-
         const conversation = conversations.find(c => c.id == conversationId);
 
         if (conversation && chatManager) {
-            // Auto-open the conversation
             chatManager.openExistingConversation(
                 conversationId,
                 conversation.name,
                 conversation.avatar,
                 conversation.type || 'group'
             );
-
             console.log(`Auto-opened chat: ${conversation.name}`);
         } else {
             console.error(`Conversation ${conversationId} not found`);
-
-            // Fallback: try to get participants to determine conversation name
             const participantsResponse = await fetch(`/api/chat/conversation/${conversationId}/participants`);
             const participants = await participantsResponse.json();
 
@@ -1161,24 +1051,21 @@ async function openMentionChat(conversationId) {
             }
         }
 
-        // Close mention notifications
         document.querySelectorAll('.mention-toast').forEach(toast => {
             const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
             bsToast.hide();
         });
-
     } catch (error) {
         console.error('Error auto-opening chat:', error);
     }
 }
 
-
 async function openChat(userId, name, avatar) {
     try {
         const response = await fetch('/api/chat/find-or-create-conversation', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({targetUserId: userId})
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ targetUserId: userId })
         });
         const data = await response.json();
 
@@ -1195,18 +1082,14 @@ async function openChat(userId, name, avatar) {
     }
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
     if (!chatManager) {
         window.chatManager = chatManager = new EnhancedChatManager();
     }
     connectStompClient();
     if (document.getElementById('onlineFriendsList')) chatManager.loadOnlineFriends();
-    bindHeaderDropdown();
 
-    // **THÊM MỚI: CSS cho mention toast**
     const mentionToastStyles = `
-        <style>
         .mention-toast {
             min-width: 300px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -1221,22 +1104,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         #mention-toast-container {
             z-index: 12000 !important;
-            top: 80px !important; /* Dưới header */
+            top: 80px !important;
         }
-        </style>
     `;
 
-
     const mentionNotificationStyles = `
-        <style>
-       .mention-toast {
+        .mention-toast {
             min-width: 320px;
             max-width: 400px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             border-left: 4px solid #1877f2;
             animation: slideInFromRight 0.3s ease-out;
         }
-
         @keyframes slideInFromRight {
             from {
                 transform: translateX(100%);
@@ -1247,29 +1126,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 opacity: 1;
             }
         }
-
         .mention-toast .toast-header {
             background-color: #f8f9fa;
             border-bottom: 1px solid #dee2e6;
         }
-        
         .mention-toast .toast-body {
             background-color: white;
         }
-        
         #mention-toast-container {
             z-index: 12000 !important;
             top: 80px !important;
         }
+    `;
 
-        </style>
-`;
-
-    // Thêm styles vào head
     if (!document.getElementById('mention-toast-styles')) {
         const styleEl = document.createElement('style');
         styleEl.id = 'mention-toast-styles';
-        styleEl.innerHTML = mentionToastStyles.replace(/<\/?style>/g, ''); // Remove style tags
+        styleEl.innerHTML = mentionToastStyles;
         document.head.appendChild(styleEl);
     }
 

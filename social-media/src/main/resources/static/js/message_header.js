@@ -5,6 +5,9 @@ class MessageDropdown {
         this.conversationList = document.getElementById('conversationListHeader');
         this.isOpen = false;
         this.modal = null;
+        this.currentPage = 0;
+        this.hasMore = true;
+        this.isLoading = false;
         // Danh sách user chọn để tạo nhóm - Giữ trong class thay vì global
         this.selectedUsers = new Map(); // Sử dụng Map để lưu thêm info: id -> {name, avatar}
         this.init();
@@ -77,34 +80,69 @@ class MessageDropdown {
     }
 
     async loadContacts() {
-        this.showLoading();
-        try {
-            const data = await this.fetchContacts();
-            this.renderContacts(data);
-        } catch (error) {
-            console.error('Error loading contacts:', error);
-            this.showErrorState();
+        this.currentPage = 0;
+        this.hasMore = true;
+        this.conversationList.innerHTML = '';  // Reset list
+        this.loadMoreContacts();
+
+        // Thêm infinite scroll listener nếu chưa có
+        if (!this.conversationList.dataset.scrollBound) {
+            this.conversationList.addEventListener('scroll', () => this.handleScroll());
+            this.conversationList.dataset.scrollBound = 'true';
         }
     }
 
-    async fetchContacts() {
-        const response = await fetch('/api/conversations', {
+    handleScroll() {
+        if (this.isLoading || !this.hasMore) return;
+        const { scrollTop, scrollHeight, clientHeight } = this.conversationList;
+        if (scrollTop + clientHeight >= scrollHeight - 50) {  // Gần cuối (threshold 50px)
+            this.loadMoreContacts();
+        }
+    }
+
+    async loadMoreContacts() {
+        if (this.isLoading || !this.hasMore) return;
+        this.isLoading = true;
+        this.showLoading(true, true);  // Show loader and append
+
+        try {
+            const data = await this.fetchContacts(this.currentPage);
+            this.renderContacts(data.content, true);  // Append mode
+            this.hasMore = data.last === false;  // Kiểm tra có page tiếp không (Page object có 'last')
+            this.currentPage++;
+        } catch (error) {
+            console.error('Error loading contacts:', error);
+            this.showErrorState();
+        } finally {
+            this.isLoading = false;
+            this.showLoading(false);  // Hide loader
+        }
+    }
+
+    async fetchContacts(page) {
+        const response = await fetch(`/api/conversations?page=${page}&size=20`, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();
     }
 
-    renderContacts(data) {
-        let html = this.createGroupButtonHtml();
-        // Render friends
+    renderContacts(data, append = false) {
+        let html = '';
+        if (!append) {
+            html += this.createGroupButtonHtml();
+        }
         if (data.length > 0) {
             html += data.map(friend => this.createFriendItemHtml(friend)).join('');
-        } else {
+        } else if (!append) {
             this.showEmptyState();
             return;
         }
-        this.conversationList.innerHTML = html;
+        if (append) {
+            this.conversationList.innerHTML += html;
+        } else {
+            this.conversationList.innerHTML = html;
+        }
     }
 
     createGroupButtonHtml() {
@@ -330,12 +368,21 @@ class MessageDropdown {
         }
     }
 
-    showLoading() {
-        this.conversationList.innerHTML = `
-            <div class="loading-state text-center p-3">
-                <i class="fas fa-spinner fa-spin"></i> Đang tải...
-            </div>
-        `;
+    showLoading(show, append = false) {
+        const loaderClass = 'loading-state';
+        if (!show) {
+            // Hide: Remove all loader elements
+            const loaders = this.conversationList.querySelectorAll(`.${loaderClass}`);
+            loaders.forEach(loader => loader.remove());
+            return;
+        }
+        // Show: Add loader
+        const loader = `<div class="${loaderClass} text-center p-3"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>`;
+        if (append) {
+            this.conversationList.innerHTML += loader;
+        } else {
+            this.conversationList.innerHTML = loader;
+        }
     }
 
     showEmptyState() {

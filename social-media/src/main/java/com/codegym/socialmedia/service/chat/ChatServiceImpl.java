@@ -49,17 +49,23 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public List<ConversationDto> getConversationsForUser(Long userId) {
-        return conversationRepository.findConversationsByUserId(userId)
-                .stream().map(c -> mapToConversationDto(c, userId)).collect(Collectors.toList());
+    public Page<ConversationDto> getConversationsForUser(Long userId, Pageable pageable) {
+        Page<Conversation> conversationPage = conversationRepository.findConversationsByUserId(userId, pageable);
+
+        Page<ConversationDto> dtoPage = conversationPage.map(conversation -> mapToConversationDto(conversation, userId));
+
+        return dtoPage;
     }
 
     @Override
-    public List<ConversationDto> getOnlineFriends(Long userId) {
+    public Page<ConversationDto> getOnlineFriends(Long userId, Pageable pageable) {
         User me = userRepository.findById(userId).orElse(null);
-        if (me == null) return List.of();
-        return conversationRepository.findPrivateConversationsByUserId(userId)
-                .stream().map(c -> mapToConversationDto(c, userId)).collect(Collectors.toList());
+        if (me == null) {
+            return Page.empty(pageable);
+        }
+
+        Page<Conversation> conversationPage = conversationRepository.findPrivateConversationsByUserId(userId, pageable);
+        return conversationPage.map(conversation -> mapToConversationDto(conversation, userId));
     }
 
     @Override
