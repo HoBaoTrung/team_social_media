@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.service.admin;
 
+import com.codegym.socialmedia.dto.UserDTO;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.repository.TrackingRepository;
@@ -31,10 +32,11 @@ public class AdminServiceImpl implements AdminService {
     private UserService userService;
 
     @Override
-    public Page<User> getAllUsers(int page, int size) {
+    public Page<UserDTO> getAllUsers(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Long currentUserId = userService.getCurrentUser().getId();
-        return userRepository.findByIdNot(currentUserId, pageable);
+        Page<User> users = userRepository.findByIdNot(currentUserId, pageable);
+        return  users.map(UserDTO::new);
     }
 
 

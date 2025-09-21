@@ -38,15 +38,7 @@
 
     <!-- Stats charts -->
     <div class="row mb-4">
-      <!-- Lượt truy cập -->
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0">
-          <div class="card-body">
-            <h5 class="text-center"><i class="fa-solid fa-eye text-primary"></i> Lượt truy cập</h5>
-            <canvas id="visitChart"></canvas>
-          </div>
-        </div>
-      </div>
+
       <!-- Người dùng mới -->
       <div class="col-md-6">
         <div class="card shadow-sm border-0">
@@ -80,20 +72,6 @@
 </script>
 
 <script>
-  // Chart lượt truy cập
-  new Chart(document.getElementById('visitChart'), {
-    type: 'bar',
-    data: {
-      labels: ['Tuần', 'Tháng', 'Hôm nay'],
-      datasets: [{
-        label: 'Lượt truy cập',
-        data: [visitStats.week, visitStats.month, visitStats.today],
-        backgroundColor: ['#36A2EB','#4BC0C0','#9966FF']
-      }]
-    },
-    options: { responsive: true, plugins: { legend: { display: false } } }
-  });
-
   // Chart người dùng mới
   new Chart(document.getElementById('userChart'), {
     type: 'bar',
@@ -105,7 +83,19 @@
         backgroundColor: ['#FF6384','#FF9F40','#FFCD56']
       }]
     },
-    options: { responsive: true, plugins: { legend: { display: false } } }
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            precision: 0
+          }
+        }
+      }
+    }
   });
 </script>
 

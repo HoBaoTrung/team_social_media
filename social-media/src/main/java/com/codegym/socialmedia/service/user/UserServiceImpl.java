@@ -116,13 +116,7 @@ public class UserServiceImpl implements UserService {
         List<User> friends = friendshipRepository.findFriendsByKeyword(currentUserId, keyword);
 
         return friends.stream()
-                .map(u -> new UserDTO(
-                        u.getId(),
-                        u.getUsername(),
-                        u.getFirstName() + " " + u.getLastName(),
-                        u.getProfilePicture()
-                ))
-                .toList();
+                .map(u -> new UserDTO(u)).toList();
     }
 
 

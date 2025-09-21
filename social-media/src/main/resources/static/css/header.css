@@ -192,8 +192,8 @@
 
 .online-dot {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
+    top: -5px;
+    right: -2px;
     width: 14px;
     height: 14px;
     background: #42b883;
@@ -323,18 +323,6 @@
     background: #8a8d91;
 }
 
-/* Update existing online dot */
-.online-dot {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 14px;
-    height: 14px;
-    background: #42b883;
-    border: 2px solid white;
-    border-radius: 50%;
-    z-index: 1;
-}
 
 .online-dot.offline {
     background: #8a8d91;

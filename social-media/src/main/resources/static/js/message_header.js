@@ -143,7 +143,6 @@ class MessageDropdown {
              onclick="messageDropdown.openChat('${friend.id}', '${nameEsc}', '${avatar}', '${type}')">
             <div style="position: relative;">
                 <img src="${avatar}" alt="Avatar" class="conversation-avatar">
-                <div class="online-dot ${onlineClass}"></div>
             </div>
             <div class="conversation-info">
                 <div class="conversation-name d-flex justify-content-between align-items-center">

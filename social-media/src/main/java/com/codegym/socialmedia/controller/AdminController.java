@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.controller;
 
+import com.codegym.socialmedia.dto.UserDTO;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.service.admin.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +26,7 @@ public class AdminController {
     public String showDashboard(@RequestParam(defaultValue = "0") int page,
                                 @RequestParam(defaultValue = "5") int size,
                                 Model model) {
-        Page<User> users = adminService.getAllUsers(page, size);
+        Page<UserDTO> users = adminService.getAllUsers(page, size);
         Map<String, Long> visitStats = adminService.getVisitStatistics();
         Map<String, Long> newUserStats = adminService.getNewUserStatistics();
 
@@ -38,15 +39,18 @@ public class AdminController {
 
     // Block user (gọi bằng nút trong Thymeleaf form hoặc JS)
     @PostMapping("/block/{userId}")
-    public String blockUser(@PathVariable Long userId) {
+    public String blockUser(@PathVariable Long userId,
+                            @RequestParam(defaultValue = "0") int page) {
         adminService.blockUser(userId);
-        return "redirect:/admin/dashboard"; // Sau khi block xong, reload lại dashboard
+        // redirect về lại trang users với đúng số trang hiện tại
+        return "redirect:/admin/users?page=" + page;
     }
+
     @GetMapping("/users")
     public String showUsers(@RequestParam(defaultValue = "0") int page,
                             @RequestParam(defaultValue = "5") int size,
                             Model model) {
-        Page<User> users = adminService.getAllUsers(page, size);
+        Page<UserDTO> users = adminService.getAllUsers(page, size);
         model.addAttribute("users", users);
         return "admin/users";
     }

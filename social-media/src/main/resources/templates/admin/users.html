@@ -62,8 +62,11 @@
                             </td>
                             <td>
                                 <form th:action="@{/admin/block/{id}(id=${user.id})}" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-warning">
-                                        <i class="fa-solid fa-ban"></i> Block
+                                    <input type="hidden" name="page" th:value="${users.number}" />
+                                    <button type="submit" class="btn btn-sm"
+                                            th:classappend="${user.active} ? 'btn-warning' : 'btn-success'">
+                                        <i th:class="${user.active} ? 'fa-solid fa-ban' : 'fa-solid fa-check'"></i>
+                                        <span th:text="${user.active} ? 'Block' : 'Unblock'"></span>
                                     </button>
                                 </form>
                             </td>
