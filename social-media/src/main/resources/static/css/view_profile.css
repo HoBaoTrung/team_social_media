@@ -11,78 +11,59 @@
     object-fit: cover;
 }
 
+.avatar-container {
+    position: absolute;
+    bottom: -60px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
 .avatar {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    border: 4px solid #fff;     /* viền trắng giống FB */
-    display: block;
-    margin: 0 auto;             /* căn avatar ra giữa */
-}
-
-.avatar-container {
-    position: absolute;
-    bottom: -60px;
-    left: 40px;
-    display: flex;
-    /*flex-direction: column;*/
-    align-items: flex-start;
-    /*align-items: center;*/
-    gap: 20px; /* khoảng cách giữa avatar và thông tin */
-}
-
-.user-info {
-    flex-direction: column;
-    justify-content: center;
-    margin-top: 100px;
+    border: 4px solid #fff;
+    object-fit: cover;
 }
 
 .user-name {
-    margin-top: 10px;           /* cách avatar một đoạn */
-    font-size: 30px;
+    font-size: 24px;
     font-weight: bold;
-    text-align: center;         /* căn chữ ra giữa avatar */
+    color: #333;
 }
 
 .button-group {
     display: flex;
     flex-wrap: wrap;
-    gap:10px
+    gap: 10px;
+    margin-top: 10px;
 }
 
-.user-name, .button-group {
-    margin-top: auto; /* Đẩy các phần tử này xuống dưới nếu cần thêm khoảng cách */
-    margin-bottom: 15px;
+.user-name,.button-group{
+    position: relative;
+    bottom: -25px;
 }
-
-/* Cột bên trái chứa thông tin cá nhân + bạn bè */
-.profile-left-column {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-/* Cột bên phải chứa bài viết */
-.posts-container {
-    flex: 2;
-}
-
 
 /* === TABS === */
 .profile-tabs {
-    margin-top: 120px;
+    margin-top: 80px;
     background-color: white;
-    padding: 10px 40px;
+    padding: 10px 20px;
     display: flex;
-    gap: 20px;
+    gap: 15px;
     border-bottom: 1px solid #ccc;
+    overflow-x: auto;
+    white-space: nowrap;
 }
 
 .tab {
     text-decoration: none;
     color: #333;
-    padding: 10px;
+    padding: 10px 15px;
+    font-size: 16px;
+    transition: all 0.3s ease;
 }
 
 .tab.active {
@@ -91,63 +72,73 @@
     color: #1876f2;
 }
 
+.tab:hover:before {
+    left: 100%;
+}
+
 /* === LAYOUT 2 CỘT === */
 .profile-page-container {
+    display: flex;
     gap: 20px;
-    padding: 30px 40px;
+    padding: 20px;
     align-items: flex-start;
 }
 
-.card-box {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-/* === USER INFO (LEFT) === */
-.profile-content {
+.profile-left-column {
     flex: 1;
-    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-/* === POSTS (RIGHT) === */
 .posts-container {
     flex: 2;
 }
 
+.card-box {
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
 
+/* === USER INFO (LEFT) === */
+.profile-content {
+    width: 100%;
+}
 
 .info-item {
     margin-bottom: 15px;
-    font-size: 16px;
+    font-size: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    background: #f8f9fa;
+    border-left: 3px solid #1877f2;
+    transition: all 0.3s ease;
 }
 
-.profile-actions {
-    margin-top: 20px;
+.info-item:hover {
+    background: #e3f2fd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .profile-actions .btn {
     display: inline-block;
-    padding: 10px 20px;
+    padding: 8px 15px;
     background-color: #1876f2;
     color: white;
     border-radius: 5px;
     text-decoration: none;
+    font-size: 14px;
 }
 
-.enhanced-message-btn{
-    background-color: #1876f2;
-    color: white;border-radius: 5px;text-decoration: none;
-}
-
-
+/* === POSTS (RIGHT) === */
 .post-card {
     background-color: #fff;
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .post-header {
@@ -157,21 +148,16 @@
 }
 
 .post-avatar {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    margin-right: 12px;
+    margin-right: 10px;
     object-fit: cover;
-}
-
-.post-user-info {
-    display: flex;
-    flex-direction: column;
 }
 
 .post-username {
     font-weight: bold;
-    font-size: 16px;
+    font-size: 15px;
 }
 
 .post-time {
@@ -180,53 +166,82 @@
 }
 
 .post-content {
-    font-size: 15px;
+    font-size: 14px;
     margin-top: 10px;
     white-space: pre-wrap;
 }
 
-
-/* Responsive: mobile vẫn đẹp */
-@media (max-width: 768px) {
-    .friend-container {
-        grid-template-columns: repeat(2, 1fr); /* 2 cột khi nhỏ */
-    }
+/* === FRIENDS LIST === */
+#friends-list {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    white-space: nowrap;
 }
 
-@media (max-width: 480px) {
-    .friend-container {
-        grid-template-columns: repeat(1, 1fr); /* 1 cột */
-    }
 
-    .friend-avatar {
-        width: 60px;
-        height: 60px;
-    }
-
-    .friend-name {
-        font-size: 14px;
-    }
+/* === PHOTOS === */
+#profile-photos-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
 }
 
-button {
-    padding: 5px 25px;
-    border-radius: 20px;
-    text-align: center;
-    text-decoration: none;
+.profile-photo-thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 6px;
     cursor: pointer;
-     box-sizing: border-box;
+    transition: transform 0.2s;
 }
 
- .floating-search-btn {
-     position: fixed;
-     bottom: 20px;
-     left: 20px;
-     z-index: 1000;
- }
+.profile-photo-thumb:hover {
+    transform: scale(1.02);
+}
+
+/* === LIGHTBOX === */
+#lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+#lightbox-img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+}
+
+#lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+}
+
+/* === FLOATING SEARCH BUTTON === */
+.floating-search-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+}
 
 .floating-search-btn button {
-    width: 56px;
-    height: 56px;
+    width: 50px;
+    height: 50px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease;
 }
@@ -236,33 +251,161 @@ button {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-#profile-photos-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-    margin-top: 20px;
+/* === ENHANCED MESSAGE BUTTON === */
+.enhanced-message-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: #1876f2;
+    color: white;
+    border-radius: 5px;
+    padding: 8px 15px;
+    text-decoration: none;
+    font-size: 14px;
 }
 
-.photo-item {
-    position: relative;
-    aspect-ratio: 1;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.2s;
+/* === RESPONSIVE DESIGN === */
+@media (max-width: 1024px) {
+    .profile-page-container {
+        flex-direction: column;
+    }
+
+    .profile-left-column, .posts-container {
+        flex: none;
+        width: 100%;
+    }
+
+    .cover-container {
+        height: 250px;
+    }
+
+    .avatar-container {
+        bottom: -50px;
+        left: 15px;
+        gap: 10px;
+    }
+
+    .avatar {
+        width: 100px;
+        height: 100px;
+    }
+
+    .user-name {
+        font-size: 20px;
+    }
+
+    .profile-tabs {
+        margin-top: 60px;
+        padding: 10px 15px;
+    }
 }
 
-.photo-item:hover {
-    transform: scale(1.02);
+@media (max-width: 768px) {
+    .cover-container {
+        height: 200px;
+    }
+
+    .avatar-container {
+        flex-direction: column;
+        align-items: flex-start;
+        bottom: -80px;
+        left: 15px;
+        gap: 8px;
+    }
+
+    .avatar {
+        width: 80px;
+        height: 80px;
+        margin: 0; /* Loại bỏ margin để avatar căn trái */
+    }
+
+    .user-name {
+        font-size: 18px;
+        order: 1; /* Đảm bảo user-name ở trên */
+    }
+
+    .button-group {
+        order: 2; /* Đảm bảo button-group ở dưới user-name */
+        flex-direction: initial;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .profile-tabs {
+        margin-top: 90px;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .tab {
+        font-size: 14px;
+        padding: 8px 10px;
+    }
+
+    #profile-photos-container {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    #friends-list .col-md-3 {
+        width: 120px; /* Giảm chiều ngang friend-card trên mobile */
+    }
+
+    .floating-search-btn {
+        bottom: 70px;
+    }
 }
 
-.photo-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+@media (max-width: 480px) {
+    .cover-container {
+        height: 150px;
+    }
+
+    .avatar-container {
+        bottom: -115px;
+        left: 10px;
+    }
+
+    .avatar {
+        width: 60px;
+        height: 60px;
+    }
+
+    .user-name {
+        font-size: 16px;
+    }
+
+    .profile-tabs {
+        margin-top: 125px;
+        padding: 5px;
+    }
+
+    .tab {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    .profile-page-container {
+        padding: 10px 0 0 0 !important;
+    }
+
+    .card-box {
+        padding: 10px;
+    }
+
+    .info-item {
+        font-size: 14px;
+    }
+
+    #profile-photos-container {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    #friends-list .col-md-3 {
+        width: 100px; /* Giảm thêm chiều ngang friend-card trên màn hình nhỏ */
+    }
 }
 
-/* Enhanced loading states */
+/* === ENHANCED LOADING STATES === */
 .loaded {
     animation: fadeIn 0.5s ease;
 }
@@ -270,74 +413,4 @@ button {
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
-}
-
-/* Better responsive design */
-@media (max-width: 768px) {
-    .floating-search-btn {
-        bottom: 80px;
-    }
-
-    #profile-photos-container {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
-
-    .enhanced-button-group {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .enhanced-button-group > * {
-        width: 100%;
-        min-width: unset;
-    }
-
-    .profile-page-container {
-        flex-direction: column;
-    }
-
-    .profile-left-column {
-        margin-bottom: 20px;
-    }
-}
-
-/* Enhanced info items */
-.info-item {
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 8px;
-    background: #f8f9fa;
-    border-left: 4px solid #1877f2;
-    transition: all 0.3s ease;
-}
-
-.info-item:hover {
-    background: #e3f2fd;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Enhanced profile tabs */
-.profile-tabs .tab {
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.profile-tabs .tab:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(24, 119, 242, 0.1), transparent);
-    transition: left 0.5s;
-}
-
-.profile-tabs .tab:hover:before {
-    left: 100%;
-}
-
-.profile-tabs .tab.active {
-    background: rgba(24, 119, 242, 0.1);
 }

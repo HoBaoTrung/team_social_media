@@ -108,14 +108,8 @@ function buildNotificationText(n) {
         case 'FRIEND_REQUEST':
             return `${username} đã gửi lời mời kết bạn`;
         case 'MENTION_COMMENT':
-            // Kiểm tra reference type để phân biệt mention trong comment vs chat
-            if (n.referenceType === 'POST') {
-                // Nếu referenceType là POST thì đây là mention trong chat (vì dùng POST làm reference)
-                return `${username} đã nhắc đến bạn trong nhóm chat`;
-            } else {
                 // Mention trong comment (logic cũ)
                 return `${username} đã nhắc đến bạn trong một bình luận`;
-            }
         default:
             return n.message || "Bạn có một thông báo mới";
     }
