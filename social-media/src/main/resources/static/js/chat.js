@@ -648,7 +648,7 @@ class ChatManager {
         const el = document.getElementById('onlineFriendsList');
         if (this.onlineIsLoading || !this.onlineHasMore) return;
         const { scrollTop, scrollHeight, clientHeight } = el;
-        if (scrollTop + clientHeight >= scrollHeight - 50) {
+        if (scrollTop + clientHeight >= scrollHeight - 5) {
             this.loadMoreOnlineFriends();
         }
     }
@@ -663,7 +663,7 @@ class ChatManager {
         el.appendChild(loader);
 
         try {
-            const r = await fetch(`/api/chat/online-friends?page=${this.onlineCurrentPage}&size=20`);
+            const r = await fetch(`/api/chat/online-friends?page=${this.onlineCurrentPage}&size=8`);
             if (!r.ok) throw new Error('Failed to load');
             const data = await r.json();
             const friends = data.content;

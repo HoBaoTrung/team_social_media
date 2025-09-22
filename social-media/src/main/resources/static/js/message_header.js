@@ -120,7 +120,7 @@ class MessageDropdown {
     }
 
     async fetchContacts(page) {
-        const response = await fetch(`/api/conversations?page=${page}&size=20`, {
+        const response = await fetch(`/api/conversations?page=${page}&size=8`, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
