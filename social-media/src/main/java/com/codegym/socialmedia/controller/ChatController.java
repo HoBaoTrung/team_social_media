@@ -54,6 +54,9 @@ public class ChatController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    private IUserRepository userRepository;
+
     @Autowired private ConversationParticipantRepository participantRepository;
 
     @PostMapping("/api/chat/search-users-for-group")
@@ -461,5 +464,70 @@ public class ChatController {
 
         throw new RuntimeException("Unsupported authentication type");
     }
+
+
+    @MessageMapping("/everyoneMention")
+    public void handleEveryoneMention(SimpMessageHeaderAccessor headerAccessor, @Payload Map<String, Object> payload) {
+        User sender = getCurrentUser(headerAccessor);
+        Long conversationId = Long.valueOf(payload.get("conversationId").toString());
+        Long participantId = Long.valueOf(payload.get("participantId").toString());
+        String message = payload.get("message").toString();
+        String senderName = payload.get("senderName").toString();
+
+        try {
+            // Verify sender is in conversation
+            boolean senderInConversation = conversationParticipantRepository
+                    .findByConversationIdAndUserId(conversationId, sender.getId())
+                    .isPresent();
+
+            if (!senderInConversation) {
+                return; // Unauthorized
+            }
+
+            // Get participant user
+            User participant = userRepository.findById(participantId)
+                    .orElse(null);
+
+            if (participant == null) {
+                return;
+            }
+
+            // Verify participant is in conversation
+            boolean participantInConversation = conversationParticipantRepository
+                    .findByConversationIdAndUserId(conversationId, participantId)
+                    .isPresent();
+
+            if (!participantInConversation) {
+                return;
+            }
+
+            // Get conversation details for the notification
+            Conversation conversation = conversationRepository.findById(conversationId)
+                    .orElse(null);
+
+            if (conversation == null) {
+                return;
+            }
+
+            // Send notification to specific user to open chat
+            Map<String, Object> notificationData = new HashMap<>();
+            notificationData.put("type", "EVERYONE_MENTION");
+            notificationData.put("conversationId", conversationId);
+            notificationData.put("conversationName", conversation.getConversationName());
+            notificationData.put("senderName", senderName);
+            notificationData.put("message", message);
+            notificationData.put("senderAvatar", sender.getProfilePicture());
+            notificationData.put("groupAvatar", conversation.getGroupAvatar());
+            messagingTemplate.convertAndSendToUser(
+                    participant.getUsername(),
+                    "/queue/everyone-mention",
+                    notificationData
+            );
+
+        } catch (Exception e) {
+            System.err.println("Error handling @everyone mention: " + e.getMessage());
+        }
+    }
+
 
 }

@@ -46,6 +46,54 @@ class ChatManager {
 
     setupGlobalListeners() {}
 
+    notifyUserToOpenChat(participant, conversationId, message) {
+        if (stompClient && stompClient.connected) {
+            const notificationData = {
+                type: 'EVERYONE_MENTION',
+                conversationId: conversationId,
+                participantId: participant.id,
+                participantName: participant.fullName,
+                message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                senderName: this.getCurrentUserName()
+            };
+            stompClient.send("/app/everyoneMention", {}, JSON.stringify(notificationData));
+        }
+    }
+
+    getCurrentUserName() {
+        const nameElement = document.querySelector('[data-current-user-name]');
+        if (nameElement) {
+            return nameElement.textContent || nameElement.getAttribute('data-current-user-name');
+        }
+        return window.currentUserName || 'Người dùng';
+    }
+
+    async handleEveryoneMention(conversationId, message) {
+        try {
+            const response = await fetch(`/api/chat/conversation/${conversationId}/participants`);
+            const participants = await response.json();
+            const currentUserId = getCurrentUserId();
+            const otherParticipants = participants.filter(p => p.id != currentUserId);
+
+            if (otherParticipants.length === 0) return;
+
+            for (const participant of otherParticipants) {
+                try {
+                    const statusResponse = await fetch(`/api/activity/status/${participant.id}`);
+                    const statusData = await statusResponse.json();
+                    if (statusData.online) {
+                        this.notifyUserToOpenChat(participant, conversationId, message);
+                    }
+                } catch (error) {
+                    console.error(`Error checking status for user ${participant.id}:`, error);
+                }
+            }
+            console.log(`@everyone notification sent to ${otherParticipants.length} participants`);
+        } catch (error) {
+            console.error('Error handling @everyone mention:', error);
+        }
+    }
+
     async loadActivityStatus(conversationId) {
         try {
             const response = await fetch(`/api/chat/conversation/${conversationId}/participants`);
@@ -65,73 +113,7 @@ class ChatManager {
         } catch (error) {
             console.error('Error loading activity status:', error);
             const statusEl = document.getElementById(`chat-status-${conversationId}`);
-            if (statusEl) {
-                statusEl.textContent = 'Không xác định';
-            }
-        }
-    }
-
-    updateActivityStatus(conversationId, isOnline, lastActivity) {
-        const statusEl = document.getElementById(`chat-status-${conversationId}`);
-        if (statusEl) {
-            statusEl.textContent = lastActivity;
-            statusEl.className = isOnline ? 'sub online' : 'sub offline';
-        }
-    }
-
-    async openChat(targetKey, displayName, avatar, type = 'private') {
-        let chatType = (type || 'private').toLowerCase();
-        let domKey = String(targetKey);
-
-        if (chatType === 'private' && this.conversationCache.has(`user:${domKey}`)) {
-            const conv = this.conversationCache.get(`user:${domKey}`);
-            domKey = String(conv.id);
-        }
-
-        if (ChatManager.openChats.has(domKey)) {
-            const existing = ChatManager.openChats.get(domKey);
-            existing.style.display = 'flex';
-            if (this.chatBubbles.has(domKey)) {
-                this.chatBubbles.get(domKey).remove();
-                this.chatBubbles.delete(domKey);
-                this.updateBubblesCompact();
-            }
-            return;
-        }
-
-        const visible = Array.from(ChatManager.openChats.values()).filter(c => c.style.display !== 'none');
-        if (visible.length >= this.maxChats) {
-            const oldest = visible[0];
-            this.minimizeChat(oldest.id.replace('chat-', ''));
-        }
-
-        let convDto = null;
-        if (chatType === 'private') {
-            convDto = await this.findOrCreateConversation(domKey);
-            if (!convDto) {
-                this.toast('Không thể tạo cuộc trò chuyện', 'error');
-                return;
-            }
-            this.conversationCache.set(String(convDto.id), convDto);
-            this.conversationCache.set(`user:${targetKey}`, convDto);
-            domKey = String(convDto.id);
-        }
-
-        const chatWin = this.createChatWindow(domKey, displayName, avatar, chatType, convDto);
-        document.getElementById('chatWindowsContainer').appendChild(chatWin);
-        ChatManager.openChats.set(domKey, chatWin);
-        await this.loadHistory(domKey, 0, true);
-
-        if (chatType === 'group') this.loadGroupParticipants(domKey);
-        this.subscribeToConversation(domKey);
-    }
-
-    async markConversationAsRead(conversationId) {
-        try {
-            await fetch(`/api/chat/mark-read/${conversationId}/${getCurrentUserId()}`, { method: 'POST' });
-            await fetchTotalUnread();
-        } catch (e) {
-            console.error('Error marking as read:', e);
+            if (statusEl) statusEl.textContent = 'Không xác định';
         }
     }
 
@@ -152,16 +134,14 @@ class ChatManager {
             const oldest = visible[0];
             this.minimizeChat(oldest.id.replace('chat-', ''));
         }
-        const chatWin = this.createChatWindow(id, name, avatar, (type || 'private'));
+        const chatWin = this.createChatWindow(id, name, avatar, type || 'private');
         document.getElementById('chatWindowsContainer').appendChild(chatWin);
         ChatManager.openChats.set(id, chatWin);
         setTimeout(() => this.loadHistory(id, 0, true), 100);
         if ((type || '').toLowerCase() === 'group') this.loadGroupParticipants(id);
 
         const badges = document.querySelectorAll(`.span-conversation-id-${conversationId}`);
-        badges.forEach(badge => {
-            badge.style.display = 'none';
-        });
+        badges.forEach(badge => badge.style.display = 'none');
 
         this.subscribeToConversation(id);
         await this.markConversationAsRead(id);
@@ -183,20 +163,6 @@ class ChatManager {
         this.subscriptions.set(conversationId, sub);
     }
 
-    async findOrCreateConversation(targetUserId) {
-        try {
-            const res = await fetch('/api/chat/find-or-create-conversation', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ targetUserId: parseInt(targetUserId) })
-            });
-            const result = await res.json();
-            return result.success ? result.conversation : null;
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
-    }
 
     createChatWindow(chatId, name, avatar, type = 'private') {
         const wrap = document.createElement('div');
@@ -254,9 +220,7 @@ class ChatManager {
     handleScroll(conversationId) {
         const box = document.getElementById(`messages-${conversationId}`);
         if (!box) return;
-
         if (this.isLoadingHistory.get(conversationId)) return;
-
         if (box.scrollTop < 100 && this.hasMore.get(conversationId)) {
             const page = (this.currentPages.get(conversationId) || 0) + 1;
             this.loadHistory(conversationId, page, false);
@@ -315,30 +279,22 @@ class ChatManager {
             this.chatBubbles.delete(id);
         }
         if (this.pendingFiles[id]) delete this.pendingFiles[id];
-
         const sub = this.subscriptions.get(id);
         if (sub) {
             sub.unsubscribe();
             this.subscriptions.delete(id);
         }
-
         this.updateBubblesCompact();
     }
 
     updateBubblesCompact() {
         const container = document.getElementById('chatBubblesContainer');
         if (!container) return;
-
         const old = document.getElementById(this.compactBubbleId);
         if (old) old.remove();
-
         const bubbles = Array.from(container.querySelectorAll('.chat-bubble'));
         if (bubbles.length <= this.maxBubbles) return;
-
-        bubbles.forEach((b, i) => {
-            b.style.display = i < (bubbles.length - this.maxBubbles) ? 'none' : 'block';
-        });
-
+        bubbles.forEach((b, i) => b.style.display = i < (bubbles.length - this.maxBubbles) ? 'none' : 'block');
         const hiddenCount = bubbles.length - this.maxBubbles;
         const compact = document.createElement('div');
         compact.id = this.compactBubbleId;
@@ -357,20 +313,15 @@ class ChatManager {
         if (!input) return;
         const msg = (input.value || '').trim();
         const files = this.pendingFiles[chatId] || [];
-
         if (!msg && files.length === 0) return;
 
         const formData = new FormData();
         formData.append("conversationId", chatId);
         formData.append("content", msg);
-
         files.forEach(f => formData.append("files", f));
 
         try {
-            const res = await fetch('/api/chat/send-message', {
-                method: 'POST',
-                body: formData
-            });
+            const res = await fetch('/api/chat/send-message', { method: 'POST', body: formData });
             if (!res.ok) {
                 const result = await res.json();
                 throw new Error(result.error || 'Unknown error');
@@ -382,6 +333,10 @@ class ChatManager {
             delete this.pendingFiles[chatId];
             const previewBox = document.getElementById(`preview-${chatId}`);
             if (previewBox) previewBox.innerHTML = '';
+
+            if (msg.includes('@everyone')) {
+                await this.handleEveryoneMention(chatId, msg);
+            }
         } catch (e) {
             console.error(e);
             this.toast('Không thể gửi tin nhắn: ' + e.message, 'error');
@@ -419,17 +374,14 @@ class ChatManager {
             if (!res.ok) throw new Error('Failed to load history');
             const messages = await res.json();
 
-            if (isInitial) {
-                box.innerHTML = '';
-            }
-
+            if (isInitial) box.innerHTML = '';
             const fragment = document.createDocumentFragment();
             const me = String(getCurrentUserId());
 
             for (let i = messages.length - 1; i >= 0; i--) {
                 const m = messages[i];
                 const type = String(m.senderId) === me ? 'sent' : 'received';
-                const sender = type === 'received' ? { name: m.senderName, avatar: m.senderAvatar } : null;
+                const sender = type === 'received' ? {name: m.senderName, avatar: m.senderAvatar} : null;
                 const row = this.createMessageRow(m, type, sender);
                 fragment.appendChild(row);
             }
@@ -444,9 +396,7 @@ class ChatManager {
             }
 
             this.hasMore.set(conversationId, messages.length === 20);
-            if (!isInitial) {
-                this.currentPages.set(conversationId, page);
-            }
+            if (!isInitial) this.currentPages.set(conversationId, page);
         } catch (e) {
             console.error(e);
             this.toast('Lỗi tải lịch sử chat', 'error');
@@ -478,7 +428,6 @@ class ChatManager {
     addMessageToUI(conversationId, message, type, sender = null) {
         const box = document.getElementById(`messages-${conversationId}`);
         if (!box) return;
-
         const row = this.createMessageRow(message, type, sender);
         box.appendChild(row);
         box.scrollTop = box.scrollHeight;
@@ -486,7 +435,6 @@ class ChatManager {
 
     renderMessage(message) {
         let html = '';
-
         (message.attachments || []).forEach(att => {
             switch (att.type) {
                 case "IMAGE":
@@ -501,29 +449,26 @@ class ChatManager {
                 case "FILE":
                     const ext = att.attachmentUrl.split('.').pop().toLowerCase();
                     html += `
-                        <div class="message-file">
-                            <a href="${att.attachmentUrl}" download="${att.fileName}" class="file-link">
-                                <div class="file-icon ${ext}"></div>
-                                <div class="file-info">
-                                    <div class="file-name">${att.fileName}</div>
-                                    <div class="file-size">${att.fileSize}</div>
-                                </div>
-                            </a>
-                        </div>`;
+                    <div class="message-file">
+                        <a href="${att.attachmentUrl}" download="${att.fileName}" class="file-link">
+                            <div class="file-icon ${ext}"></div>
+                            <div class="file-info">
+                                <div class="file-name">${att.fileName}</div>
+                                <div class="file-size">${att.fileSize}</div>
+                            </div>
+                        </a>
+                    </div>`;
                     break;
                 default:
                     html += `<div class="message-unknown">[Unsupported attachment]</div>`;
             }
         });
-
         if (message.type === "CALL" && !html) {
             html = `<div class="message-call"> Cuộc gọi: ${message.content || 'Không xác định'}</div>`;
         }
-
         if (message.content) {
             html += `<div class="message-text">${ChatManager.processMentions(message.content)}</div>`;
         }
-
         return html || `<div class="message-unknown">[Empty message]</div>`;
     }
 
@@ -536,7 +481,6 @@ class ChatManager {
     toggleEmoji(chatId) {
         const picker = document.getElementById(`emojiPicker-${chatId}`);
         picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
-
         if (!picker.dataset.bound) {
             picker.addEventListener('emoji-click', (event) => {
                 const emoji = event.detail.unicode;
@@ -564,21 +508,15 @@ class ChatManager {
                 this.toast('Tối đa 10 files mỗi lần gửi', 'error');
                 return;
             }
-
-            if (!this.pendingFiles[chatId]) {
-                this.pendingFiles[chatId] = [];
-            }
+            if (!this.pendingFiles[chatId]) this.pendingFiles[chatId] = [];
             this.pendingFiles[chatId].push(...files);
-
             const previewBox = document.getElementById(`preview-${chatId}`);
             if (previewBox) {
                 previewBox.innerHTML = '';
-
                 files.forEach((f, index) => {
                     const ext = f.name.split('.').pop().toLowerCase();
                     const div = document.createElement("div");
                     div.className = "file-preview";
-
                     let previewEl;
                     if (f.type.startsWith("image")) {
                         previewEl = document.createElement("img");
@@ -604,10 +542,8 @@ class ChatManager {
                         previewEl.src = iconPath;
                         previewEl.className = "file-icon";
                     }
-
                     const info = document.createElement("span");
                     info.innerText = `${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
-
                     const removeBtn = document.createElement("button");
                     removeBtn.className = "remove-btn";
                     removeBtn.innerText = "";
@@ -616,7 +552,6 @@ class ChatManager {
                         files.splice(index, 1);
                         div.remove();
                     };
-
                     div.appendChild(previewEl);
                     div.appendChild(info);
                     div.appendChild(removeBtn);
@@ -630,14 +565,11 @@ class ChatManager {
     async loadOnlineFriends() {
         const el = document.getElementById('onlineFriendsList');
         if (!el) return;
-
         this.onlineCurrentPage = 0;
         this.onlineHasMore = true;
         this.onlineIsLoading = false;
         el.innerHTML = '';
-
         this.loadMoreOnlineFriends();
-
         if (!el.dataset.scrollBound) {
             el.addEventListener('scroll', () => this.handleOnlineScroll());
             el.dataset.scrollBound = 'true';
@@ -668,10 +600,7 @@ class ChatManager {
             const data = await r.json();
             const friends = data.content;
 
-            if (!Array.isArray(friends)) {
-                throw new Error('Invalid response');
-            }
-
+            if (!Array.isArray(friends)) throw new Error('Invalid response');
             el.removeChild(loader);
 
             if (friends.length === 0 && this.onlineCurrentPage === 0) {
@@ -684,8 +613,8 @@ class ChatManager {
                 return `<div class="friend-item-enhanced" 
                         onclick="chatManager.openExistingConversation('${f.id}', '${this.escape(f.name)}', '${f.avatar || '/images/default-avatar.jpg'}', '${f.type || 'private'}')">
                     <div style="position:relative">
-                      <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
-                      ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
+                        <img src="${f.avatar || '/images/default-avatar.jpg'}" class="friend-avatar">
+                        ${(f.isOnline || f.online) ? '<div class="online-indicator"></div>' : ''}
                     </div>
                     <span class="friend-name">${this.escape(f.name)}</span>
                     <span class="badge bg-danger ms-2 span-conversation-id-${f.id}" style="${spanStyle}">
@@ -694,15 +623,12 @@ class ChatManager {
                 </div>`;
             }).join('');
             el.innerHTML += html;
-
             this.onlineHasMore = data.last === false;
             this.onlineCurrentPage++;
         } catch (error) {
             console.error('Error fetching online friends:', error);
             if (loader) el.removeChild(loader);
-            if (this.onlineCurrentPage === 0) {
-                el.innerHTML = `<div class="text-center text-danger p-3">Lỗi tải danh sách</div>`;
-            }
+            if (this.onlineCurrentPage === 0) el.innerHTML = `<div class="text-center text-danger p-3">Lỗi tải danh sách</div>`;
         } finally {
             this.onlineIsLoading = false;
         }
@@ -712,7 +638,6 @@ class ChatManager {
         const ta = evt.target;
         this.autoResize(ta);
         if ((ta.dataset.chatType || 'private') !== 'group') return;
-
         const val = ta.value;
         const cursor = ta.selectionStart;
         const before = val.substring(0, cursor);
@@ -728,30 +653,37 @@ class ChatManager {
     }
 
     handleKeyDown(evt, convId) {
-        if (evt.key === 'Enter' && !evt.shiftKey) return;
         const box = document.getElementById(`mentions-${convId}`);
-        if (!box || box.style.display !== 'block') return;
+        if (!box || box.style.display !== 'block') {
+            if (evt.key === 'Enter' && !evt.shiftKey) {
+                evt.preventDefault();
+                this.sendMessage(convId);
+            }
+            return;
+        }
         const items = box.querySelectorAll('.mention-item');
+        if (!items.length) return;
         let idx = Array.from(items).findIndex(x => x.classList.contains('selected'));
+
         switch (evt.key) {
             case 'ArrowDown':
                 evt.preventDefault();
-                idx = Math.min(idx + 1, items.length - 1);
+                idx = (idx + 1) % items.length;
                 this._selectMentionItem(items, idx);
                 break;
             case 'ArrowUp':
                 evt.preventDefault();
-                idx = Math.max(idx - 1, 0);
+                idx = idx <= 0 ? items.length - 1 : idx - 1;
                 this._selectMentionItem(items, idx);
                 break;
             case 'Tab':
             case 'Enter':
-                if (idx >= 0) {
-                    evt.preventDefault();
-                    this.selectMention(convId, items[idx]);
-                }
+                evt.preventDefault();
+                if (idx >= 0) this.selectMention(convId, items[idx]);
+                else this.selectMention(convId, items[0]);
                 break;
             case 'Escape':
+                evt.preventDefault();
                 this.hideMentionSuggestions(convId);
                 break;
         }
@@ -781,25 +713,74 @@ class ChatManager {
             this.loadGroupParticipants(convId);
             return;
         }
-        const filtered = pool.filter(p =>
-            (p.fullName || '').toLowerCase().includes(query.toLowerCase()) ||
-            (p.username || '').toLowerCase().includes(query.toLowerCase())
-        );
+        const currentUserId = getCurrentUserId();
+        const currentUser = pool.find(p => p.id == currentUserId);
+        let filtered = [];
+
+        if (!query || query.trim() === '') {
+            filtered.push({
+                id: 'everyone',
+                username: 'everyone',
+                fullName: 'Tất cả thành viên',
+                role: 'SPECIAL',
+                isSpecial: true
+            });
+            filtered.push(...pool.filter(p => p.id != currentUserId));
+        } else {
+            const lowerQuery = query.toLowerCase();
+            if ('everyone'.includes(lowerQuery) || 'tất cả'.includes(lowerQuery)) {
+                filtered.push({
+                    id: 'everyone',
+                    username: 'everyone',
+                    fullName: 'Tất cả thành viên',
+                    role: 'SPECIAL',
+                    isSpecial: true
+                });
+            }
+            const memberResults = pool.filter(p => {
+                const matchesQuery = (p.fullName || '').toLowerCase().includes(lowerQuery) ||
+                    (p.username || '').toLowerCase().includes(lowerQuery);
+                const isSearchingForSelf = currentUser && (
+                    (currentUser.fullName || '').toLowerCase().includes(lowerQuery) ||
+                    (currentUser.username || '').toLowerCase().includes(lowerQuery)
+                ) && p.id == currentUserId;
+                return matchesQuery && (p.id != currentUserId || isSearchingForSelf);
+            });
+            memberResults.sort((a, b) => {
+                if (a.id == currentUserId && b.id != currentUserId) return -1;
+                if (b.id == currentUserId && a.id != currentUserId) return 1;
+                return (a.fullName || '').localeCompare(b.fullName || '');
+            });
+            filtered.push(...memberResults);
+        }
+
         if (!filtered.length) {
             this.hideMentionSuggestions(convId);
             return;
         }
+
         const el = document.getElementById(`mentions-${convId}`);
-        el.innerHTML = filtered.map((p, i) => `
-            <div class="mention-item ${i === 0 ? 'selected' : ''}" data-username="${p.username}" onclick="chatManager.selectMention('${convId}', this)">
-                <img class="mention-avatar" src="${p.avatar || '/images/default-avatar.jpg'}">
-                <div class="mention-info">
-                    <div class="mention-name">${this.escape(p.fullName)}</div>
-                    <div class="mention-username">@${this.escape(p.username || '')}</div>
-                </div>
-                ${p.role === 'ADMIN' ? '<i class="fa-solid fa-crown mention-admin"></i>' : ''}
+        el.innerHTML = filtered.map((p, i) => {
+            const displayName = p.isSpecial ? p.fullName : (p.isCurrentUser ? p.fullName : p.fullName);
+            const usernameDisplay = p.isSpecial ? '@everyone' : `@${p.username || ''}`;
+            const avatarSrc = p.avatar || '/images/default-avatar.jpg';
+            const specialClass = p.isSpecial ? 'mention-special' : '';
+            const currentUserClass = p.isCurrentUser ? 'mention-current-user' : '';
+            return `
+        <div class="mention-item ${i === 0 ? 'selected' : ''} ${specialClass} ${currentUserClass}" 
+             data-username="${p.username}" 
+             data-is-special="${p.isSpecial || false}"
+             onclick="chatManager.selectMention('${convId}', this)">
+            <img class="mention-avatar" src="${avatarSrc}">
+            <div class="mention-info">
+                <div class="mention-name">${this.escape(displayName)}</div>
+                <div class="mention-username">${this.escape(usernameDisplay)}</div>
             </div>
-        `).join('');
+            ${p.role === 'ADMIN' ? '<i class="fa-solid fa-crown mention-admin"></i>' : ''}
+            ${p.isSpecial ? '<i class="fa-solid fa-users mention-special-icon"></i>' : ''}
+        </div>
+        `;
+        }).join('');
         el.style.display = 'block';
     }
 
@@ -810,10 +791,11 @@ class ChatManager {
     selectMention(convId, el) {
         const ta = document.getElementById(`input-${convId}`);
         const username = el.getAttribute('data-username');
+        const isSpecial = el.getAttribute('data-is-special') === 'true';
         const val = ta.value;
         const before = val.substring(0, this._mentionStart);
         const after = val.substring(ta.selectionStart);
-        const mention = `@${username} `;
+        let mention = isSpecial && username === 'everyone' ? `@everyone ` : `@${username} `;
         ta.value = before + mention + after;
         const pos = before.length + mention.length;
         ta.setSelectionRange(pos, pos);
@@ -841,10 +823,7 @@ class ChatManager {
             const form = new FormData();
             form.append('avatar', f);
             try {
-                const res = await fetch(`/api/chat/conversation/${conversationId}/avatar`, {
-                    method: 'POST',
-                    body: form
-                });
+                const res = await fetch(`/api/chat/conversation/${conversationId}/avatar`, { method: 'POST', body: form });
                 const result = await res.json();
                 if (result.success) {
                     const img = document.querySelector(`#chat-${conversationId} .chat-avatar`);
@@ -886,13 +865,9 @@ class ChatManager {
         const me = String(getCurrentUserId());
         const mine = String(payload.senderId) === me;
         if (ChatManager.openChats.has(id)) {
-            if (mine) {
-                this.addMessageToUI(id, payload, 'sent');
-            } else {
-                this.addMessageToUI(id, payload, 'received', {
-                    name: payload.senderName,
-                    avatar: payload.senderAvatar
-                });
+            if (mine) this.addMessageToUI(id, payload, 'sent');
+            else {
+                this.addMessageToUI(id, payload, 'received', { name: payload.senderName, avatar: payload.senderAvatar });
                 this.markConversationAsRead(id);
             }
         }
@@ -910,6 +885,15 @@ class ChatManager {
         };
         checkOpen();
     }
+
+    async markConversationAsRead(conversationId) {
+        try {
+            await fetch(`/api/chat/mark-read/${conversationId}/${getCurrentUserId()}`, { method: 'POST' });
+            await fetchTotalUnread(); // reload danh sách + badge
+        } catch (e) {
+            console.error('Error marking as read:', e);
+        }
+    }
 }
 
 class EnhancedChatManager extends ChatManager {}
@@ -925,9 +909,7 @@ function connectStompClient() {
         isSubscribed = true;
 
         stompClient.subscribe("/user/queue/unread", (message) => {
-            if (chatManager) {
-                chatManager.handleUnreadMessage(JSON.parse(message.body));
-            }
+            if (chatManager) chatManager.handleUnreadMessage(JSON.parse(message.body));
         });
 
         stompClient.subscribe("/user/queue/call-invite", (message) => {
@@ -941,39 +923,31 @@ function connectStompClient() {
             const data = JSON.parse(message.body);
             handleAutoOpenChat(data);
         });
+
+        stompClient.subscribe("/user/queue/everyone-mention", (message) => {
+            const data = JSON.parse(message.body);
+            showEveryoneMentionNotification(data);
+        });
     }, (error) => {
         console.error("Stomp connection error:", error);
     });
 }
 
 function handleAutoOpenChat(data) {
-    console.log("Auto-opening chat for mention:", data);
-
     if (!data.conversationId) {
         console.error("No conversationId provided for auto-open chat");
         return;
     }
-
-    showMentionNotification({
-        sender: {
-            username: data.mentionedBy || 'Someone',
-            avatarUrl: data.mentionedByAvatar || '/images/default-avatar.jpg'
-        },
-        referenceId: data.conversationId
-    });
-
-    setTimeout(() => {
-        openMentionChat(data.conversationId);
-    }, 1000);
+    showMentionNotification(data);
 }
 
-function showMentionNotification(notification) {
+function showMentionNotification(data) {
     const toastHtml = `
         <div class="toast mention-toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="8000">
             <div class="toast-header">
-                <img src="${notification.sender.avatarUrl || '/images/default-avatar.jpg'}" 
+                <img src="${data.mentionedByAvatar || '/images/default-avatar.jpg'}" 
                      class="rounded me-2" width="20" height="20" alt="Avatar">
-                <strong class="me-auto">${notification.sender.username}</strong>
+                <strong class="me-auto">${data.mentionedBy}</strong>
                 <small class="text-muted">vừa xong</small>
                 <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
             </div>
@@ -981,11 +955,8 @@ function showMentionNotification(notification) {
                 <i class="fas fa-at text-primary"></i> 
                 Đã nhắc đến bạn trong nhóm chat
                 <div class="mt-2 d-flex gap-2">
-                    <button class="btn btn-sm btn-primary flex-fill" onclick="openMentionChat(${notification.referenceId})">
+                    <button class="btn btn-sm btn-primary flex-fill" onclick="openExistingConversation(${data.conversationId}, '${data.conversationName}', '${data.groupAvatar}', 'group')">
                         <i class="fas fa-comment"></i> Mở chat
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="dismissMentionNotification(this)">
-                        <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
@@ -1000,63 +971,17 @@ function showMentionNotification(notification) {
         toastContainer.style.zIndex = '12000';
         document.body.appendChild(toastContainer);
     }
-
     toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-
     const toastElement = toastContainer.lastElementChild;
     const toast = new bootstrap.Toast(toastElement);
     toast.show();
-
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
-    });
+    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
 }
 
-function dismissMentionNotification(button) {
-    const toast = button.closest('.toast');
-    const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
-    bsToast.hide();
-}
 
-async function openMentionChat(conversationId) {
-    try {
-        const conversationResponse = await fetch(`/api/conversations`);
-        const conversations = await conversationResponse.json();
-        const conversation = conversations.find(c => c.id == conversationId);
-
-        if (conversation && chatManager) {
-            chatManager.openExistingConversation(
-                conversationId,
-                conversation.name,
-                conversation.avatar,
-                conversation.type || 'group'
-            );
-            console.log(`Auto-opened chat: ${conversation.name}`);
-        } else {
-            console.error(`Conversation ${conversationId} not found`);
-            const participantsResponse = await fetch(`/api/chat/conversation/${conversationId}/participants`);
-            const participants = await participantsResponse.json();
-
-            if (participants && participants.length > 0 && chatManager) {
-                const conversationName = participants.length > 2
-                    ? `Nhóm ${participants.length} thành viên`
-                    : participants[0].fullName;
-
-                chatManager.openExistingConversation(
-                    conversationId,
-                    conversationName,
-                    '/images/default-group-avatar.jpg',
-                    participants.length > 2 ? 'group' : 'private'
-                );
-            }
-        }
-
-        document.querySelectorAll('.mention-toast').forEach(toast => {
-            const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
-            bsToast.hide();
-        });
-    } catch (error) {
-        console.error('Error auto-opening chat:', error);
+async function openExistingConversation(conversationId, name, avatar, type) {
+    if (chatManager) {
+        chatManager.openExistingConversation(conversationId, name || '', avatar || '', type || 'group');
     }
 }
 
@@ -1064,15 +989,13 @@ async function openChat(userId, name, avatar) {
     try {
         const response = await fetch('/api/chat/find-or-create-conversation', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ targetUserId: userId })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({targetUserId: userId})
         });
         const data = await response.json();
-
         if (data.success && data.conversation) {
-            const convID = data.conversation.id;
             if (chatManager) {
-                chatManager.openExistingConversation(convID, name, avatar, 'private');
+                chatManager.openExistingConversation(data.conversation.id, name, avatar, 'private');
             }
         } else {
             console.error("Không thể mở chat:", data.error);
@@ -1082,6 +1005,47 @@ async function openChat(userId, name, avatar) {
     }
 }
 
+function showEveryoneMentionNotification(data) {
+    const toastHtml = `
+        <div class="toast everyone-mention-toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
+            <div class="toast-header">
+                <img src="${data.senderAvatar || '/images/default-avatar.jpg'}" 
+                     class="rounded me-2" width="20" height="20" alt="Avatar">
+                <strong class="me-auto">${data.senderName}</strong>
+                <small class="text-muted">@everyone</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                <i class="fas fa-users text-warning"></i> 
+                Đã nhắc @everyone trong "${data.conversationName}"
+                <div class="mt-2">
+                    <small class="text-muted">${data.message}</small>
+                </div>
+                <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary flex-fill" onclick="openExistingConversation(${data.conversationId}, '${data.conversationName}', '${data.groupAvatar}', 'group')">
+                        <i class="fas fa-comment"></i> Mở chat
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    let toastContainer = document.getElementById('everyone-mention-toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'everyone-mention-toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '12000';
+        document.body.appendChild(toastContainer);
+    }
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!chatManager) {
         window.chatManager = chatManager = new EnhancedChatManager();
@@ -1090,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('onlineFriendsList')) chatManager.loadOnlineFriends();
 
     const mentionToastStyles = `
+        <style>
         .mention-toast {
             min-width: 300px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -1106,25 +1071,21 @@ document.addEventListener('DOMContentLoaded', () => {
             z-index: 12000 !important;
             top: 80px !important;
         }
+        </style>
     `;
 
     const mentionNotificationStyles = `
+        <style>
         .mention-toast {
             min-width: 320px;
             max-width: 400px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px #000000;
             border-left: 4px solid #1877f2;
             animation: slideInFromRight 0.3s ease-out;
         }
         @keyframes slideInFromRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         .mention-toast .toast-header {
             background-color: #f8f9fa;
@@ -1137,15 +1098,15 @@ document.addEventListener('DOMContentLoaded', () => {
             z-index: 12000 !important;
             top: 80px !important;
         }
+        </style>
     `;
 
     if (!document.getElementById('mention-toast-styles')) {
         const styleEl = document.createElement('style');
         styleEl.id = 'mention-toast-styles';
-        styleEl.innerHTML = mentionToastStyles;
+        styleEl.innerHTML = mentionToastStyles.replace(/<\/?style>/g, '');
         document.head.appendChild(styleEl);
     }
-
     if (!document.getElementById('mention-notification-styles')) {
         const styleEl = document.createElement('style');
         styleEl.id = 'mention-notification-styles';
@@ -1155,3 +1116,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.openChat = openChat;
+window.openExistingConversation = openExistingConversation;

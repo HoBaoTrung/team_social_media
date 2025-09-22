@@ -13,6 +13,7 @@ import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.user.UserActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,7 +39,7 @@ public class ChatServiceImpl implements ChatService {
     @Autowired private MessageRepository messageRepository;
     @Autowired private IUserRepository userRepository;
     @Autowired private NotificationService notificationService;
-
+    @Autowired private SimpMessagingTemplate messaging;
     @Autowired private UserActivityService userActivityService;
     @Override
     public ConversationDto findOrCreatePrivateConversation(Long currentUserId, Long targetUserId) {
@@ -166,14 +167,16 @@ public class ChatServiceImpl implements ChatService {
             if (user.getId().equals(sender.getId())) continue;
 
             if (mentionedUsernames.contains(user.getUsername())) {
-                // Gửi notification với conversationId để auto-open chat
-                notificationService.notify(
-                        sender.getId(),
-                        user.getId(),
-                        Notification.NotificationType.MENTION_COMMENT,
-                        Notification.ReferenceType.POST, // Sử dụng POST type
-                        conversation.getId() // Gửi conversationId thay vì message.getId()
-                );
+                // Tạo special message để trigger auto-open chat
+                Map<String, Object> autoOpenData = new HashMap<>();
+                autoOpenData.put("type", "AUTO_OPEN_CHAT");
+                autoOpenData.put("conversationId", conversation.getId());
+                autoOpenData.put("mentionedBy", sender.getFirstName() + " " + sender.getLastName());
+                autoOpenData.put("mentionedByAvatar", sender.getProfilePicture());
+                autoOpenData.put("groupAvatar",conversation.getGroupAvatar());
+                autoOpenData.put("conversationName", conversation.getConversationName());
+                messaging.convertAndSendToUser(user.getUsername(), "/queue/auto-open-chat", autoOpenData);
+
             }
         }
     }
@@ -503,8 +506,5 @@ public class ChatServiceImpl implements ChatService {
         String full = (f + " " + l).trim();
         return full.isEmpty() ? Optional.ofNullable(u.getUsername()).orElse("Người dùng") : full;
     }
-
-
-
 
 }

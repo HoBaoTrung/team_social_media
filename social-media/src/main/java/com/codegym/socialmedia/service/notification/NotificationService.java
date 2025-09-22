@@ -48,20 +48,6 @@ public class NotificationService {
         String userKey = n.getReceiver().getUsername();
         messaging.convertAndSendToUser(userKey, "/queue/notifications", mapper.toDto(n));
 
-        // Nếu là mention trong chat, gửi thêm message để auto-open chat
-        if (type == Notification.NotificationType.MENTION_COMMENT &&
-                refType == Notification.ReferenceType.POST) { // POST được dùng cho conversation
-
-            // Tạo special message để trigger auto-open chat
-            Map<String, Object> autoOpenData = new HashMap<>();
-            autoOpenData.put("type", "AUTO_OPEN_CHAT");
-            autoOpenData.put("conversationId", refId);
-            autoOpenData.put("mentionedBy", n.getSender().getFirstName() + " " + n.getSender().getLastName());
-            autoOpenData.put("mentionedByAvatar", n.getSender().getProfilePicture());
-
-            messaging.convertAndSendToUser(userKey, "/queue/auto-open-chat", autoOpenData);
-        }
-
         return n;
     }
 
