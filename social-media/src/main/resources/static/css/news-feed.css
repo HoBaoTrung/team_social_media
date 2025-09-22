@@ -609,7 +609,7 @@ header {
 /* Mobile ≤768px */
 @media (max-width: 768px) {
     .main-container {
-        padding: 0.5rem;
+        margin-top: 3rem;
     }
     .sidebar,
     .nav-sidebar {
