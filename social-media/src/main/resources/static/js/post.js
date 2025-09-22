@@ -1555,7 +1555,7 @@ class PostManager {
                         dropdown.style.position = 'absolute';
                         dropdown.style.padding = 0;
                         dropdown.style.zIndex = '10000';
-                        dropdown.style.top = `${rect.bottom}px`;
+                        dropdown.style.top = `${rect.bottom - 20}px`;
                         dropdown.style.left = `${rect.left + window.scrollX}px`;
                         dropdown.style.width = `${rect.width}px`;
                     };
