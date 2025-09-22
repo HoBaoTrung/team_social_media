@@ -129,17 +129,30 @@ class MessageDropdown {
 
     renderContacts(data, append = false) {
         let html = '';
+
+        // Đảm bảo luôn có nút "Tạo nhóm mới" ở đầu
         if (!append) {
             html += this.createGroupButtonHtml();
+        } else {
+            // Nếu append, chỉ cần thêm friend, KHÔNG đụng tới createGroup đã render từ trước
         }
+
         if (data.length > 0) {
             html += data.map(friend => this.createFriendItemHtml(friend)).join('');
         } else if (!append) {
             this.showEmptyState();
             return;
         }
+
         if (append) {
-            this.conversationList.innerHTML += html;
+            // Chèn ngay SAU nút createGroup
+            const createGroupEl = this.conversationList.querySelector('.create-group-item');
+            if (createGroupEl) {
+                createGroupEl.insertAdjacentHTML('afterend', html);
+            } else {
+                // fallback nếu lỡ bị mất thì render lại nút + data
+                this.conversationList.innerHTML = this.createGroupButtonHtml() + html;
+            }
         } else {
             this.conversationList.innerHTML = html;
         }
