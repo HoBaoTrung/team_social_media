@@ -6,6 +6,7 @@ import com.codegym.socialmedia.model.conversation.Conversation;
 import com.codegym.socialmedia.model.conversation.ConversationParticipant;
 import com.codegym.socialmedia.repository.ConversationParticipantRepository;
 import com.codegym.socialmedia.repository.ConversationRepository;
+import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.service.chat.ChatService;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import com.codegym.socialmedia.service.user.UserService;
