@@ -742,13 +742,22 @@ video:-ms-fullscreen {
     background: black;
 }
 .mentions-dropdown {
-    right: 0;
-    background: #fff;
+    position: absolute;
+    background: white;
     border: 1px solid #ddd;
-    border-radius: 6px;
-    max-height: 200px;
-    overflow-y: auto;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 10000;
+    display: none;
+}
+.mention-item {
+    padding: 5px;
+    cursor: pointer;
+}
+.mention-item:hover, .mention-item.selected {
+    background: #f0f0f0;
 }
 .mention-suggestion {
     display: flex;
