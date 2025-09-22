@@ -206,13 +206,13 @@
             tooltipTriggerList.map(function (el) {
                 return new bootstrap.Tooltip(el, {
                     placement: 'bottom',          // luôn nằm dưới
-                    fallbackPlacements: []  ,
+                    fallbackPlacements: [],
                     trigger: 'hover'
                 });
             });
 
             const messageIcon = document.getElementById('messageIcon');
-
+            const messageDropdown = document.getElementById('messageDropdown');
 
             const BOOTSTRAP_TOGGLE_SELECTOR = '[data-bs-toggle="dropdown"], .dropdown-toggle';
 
@@ -238,6 +238,14 @@
                     }
                 });
 
+                // 2) đóng custom messageDropdown (trừ khi except là messageIcon hoặc messageDropdown)
+                if (messageDropdown) {
+                    const keepOpen = except === messageDropdown || except === messageIcon
+                        || (except && except.closest && except.closest('#messageIcon'));
+                    if (!keepOpen && messageDropdown.classList.contains('show')) {
+                        messageDropdown.classList.remove('show');
+                    }
+                }
             }
 
             // Khi một Bootstrap dropdown sắp mở -> đóng hết dropdown khác trước (giữ lại dropdown đang mở)
@@ -252,16 +260,22 @@
             if (messageIcon) {
                 messageIcon.addEventListener('click', (e) => {
                     e.stopPropagation(); // ngăn click bubble ra document (để không bị đóng ngay)
-
+                    const isOpen = messageDropdown && messageDropdown.classList.contains('show');
 
                     // đóng các dropdown bootstrap khác (với except = messageIcon để giữ chat nếu cần)
                     closeAllDropdowns(messageIcon);
+
+                    // toggle custom dropdown
+                    if (messageDropdown) messageDropdown.classList.toggle('show', !isOpen);
                 });
             }
 
             // Click ngoài -> đóng tất cả
             document.addEventListener('click', (e) => {
-
+                // nếu click nằm trong một dropdown bootstrap hoặc trong messageIcon/messageDropdown thì không đóng
+                if (e.target.closest('.dropdown') || e.target.closest('#messageIcon') || e.target.closest('#messageDropdown')) {
+                    return;
+                }
                 closeAllDropdowns();
             });
 
