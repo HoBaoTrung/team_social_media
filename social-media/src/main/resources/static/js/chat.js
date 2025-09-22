@@ -53,6 +53,74 @@ class ChatManager {
         });
     }
 
+    // Method hỗ trợ để notify user mở chat
+    notifyUserToOpenChat(participant, conversationId, message) {
+        // Gửi thông báo qua WebSocket (nếu có kết nối)
+        if (stompClient && stompClient.connected) {
+            const notificationData = {
+                type: 'EVERYONE_MENTION',
+                conversationId: conversationId,
+                participantId: participant.id,
+                participantName: participant.fullName,
+                message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                senderName: this.getCurrentUserName() // Bạn cần implement method này
+            };
+
+            // Gửi qua topic chung hoặc queue riêng cho user
+            stompClient.send("/app/everyoneMention", {}, JSON.stringify(notificationData));
+        }
+    }
+
+    // Method hỗ trợ lấy tên user hiện tại
+    getCurrentUserName() {
+        // Lấy từ thông tin user hiện tại, có thể từ DOM hoặc biến global
+        const nameElement = document.querySelector('[data-current-user-name]');
+        if (nameElement) {
+            return nameElement.textContent || nameElement.getAttribute('data-current-user-name');
+        }
+
+        // Fallback: lấy từ authentication principal nếu có
+        return window.currentUserName || 'Người dùng';
+    }
+
+
+
+    async handleEveryoneMention(conversationId, message) {
+        try {
+            // Lấy danh sách participants
+            const response = await fetch(`/api/chat/conversation/${conversationId}/participants`);
+            const participants = await response.json();
+
+            const currentUserId = getCurrentUserId();
+
+            // Lọc ra những người khác (không phải người gửi)
+            const otherParticipants = participants.filter(p => p.id != currentUserId);
+
+            if (otherParticipants.length === 0) return;
+
+            // Kiểm tra ai đang online và mở chat cho họ
+            for (const participant of otherParticipants) {
+                try {
+                    // Kiểm tra trạng thái online
+                    const statusResponse = await fetch(`/api/activity/status/${participant.id}`);
+                    const statusData = await statusResponse.json();
+
+                    if (statusData.online) {
+                        // Nếu online, gửi notification để mở chat
+                        this.notifyUserToOpenChat(participant, conversationId, message);
+                    }
+                } catch (error) {
+                    console.error(`Error checking status for user ${participant.id}:`, error);
+                }
+            }
+
+            console.log(`@everyone notification sent to ${otherParticipants.length} participants`);
+
+        } catch (error) {
+            console.error('Error handling @everyone mention:', error);
+        }
+    }
+
     async loadActivityStatus(conversationId) {
         try {
             // Lấy thông tin participants để tìm user khác (trong private chat)
@@ -407,6 +475,12 @@ class ChatManager {
             delete this.pendingFiles[chatId];
             const previewBox = document.getElementById(`preview-${chatId}`);
             if (previewBox) previewBox.innerHTML = '';
+
+            // XỬ LÝ @EVERYONE - THÊM PHẦN NÀY
+            if (msg.includes('@everyone')) {
+                await this.handleEveryoneMention(chatId, msg);
+            }
+
         } catch (e) {
             console.error(e);
             this.toast('Không thể gửi tin nhắn: ' + e.message, 'error');
@@ -732,30 +806,44 @@ class ChatManager {
     }
 
     handleKeyDown(evt, convId) {
-        if (evt.key === 'Enter' && !evt.shiftKey) return;
         const box = document.getElementById(`mentions-${convId}`);
-        if (!box || box.style.display !== 'block') return;
+        if (!box || box.style.display !== 'block') {
+            // Nếu không có mention box, xử lý Enter bình thường
+            if (evt.key === 'Enter' && !evt.shiftKey) {
+                evt.preventDefault();
+                this.sendMessage(convId);
+            }
+            return;
+        }
+
         const items = box.querySelectorAll('.mention-item');
+        if (!items.length) return;
+
         let idx = Array.from(items).findIndex(x => x.classList.contains('selected'));
+
         switch (evt.key) {
             case 'ArrowDown':
                 evt.preventDefault();
-                idx = Math.min(idx + 1, items.length - 1);
+                idx = (idx + 1) % items.length; // Cycle through items
                 this._selectMentionItem(items, idx);
                 break;
             case 'ArrowUp':
                 evt.preventDefault();
-                idx = Math.max(idx - 1, 0);
+                idx = idx <= 0 ? items.length - 1 : idx - 1; // Cycle through items
                 this._selectMentionItem(items, idx);
                 break;
             case 'Tab':
             case 'Enter':
+                evt.preventDefault();
                 if (idx >= 0) {
-                    evt.preventDefault();
                     this.selectMention(convId, items[idx]);
+                } else {
+                    // Nếu không có item nào được select, chọn item đầu tiên
+                    this.selectMention(convId, items[0]);
                 }
                 break;
             case 'Escape':
+                evt.preventDefault();
                 this.hideMentionSuggestions(convId);
                 break;
         }
@@ -786,25 +874,97 @@ class ChatManager {
             this.loadGroupParticipants(convId);
             return;
         }
-        const filtered = pool.filter(p =>
-            (p.fullName || '').toLowerCase().includes(query.toLowerCase()) ||
-            (p.username || '').toLowerCase().includes(query.toLowerCase())
-        );
+
+        // Lấy thông tin user hiện tại
+        const currentUserId = getCurrentUserId();
+        const currentUser = pool.find(p => p.id == currentUserId);
+
+        let filtered = [];
+
+        // Nếu query rỗng, chỉ hiện @everyone và các thành viên khác (KHÔNG bao gồm bản thân)
+        if (!query || query.trim() === '') {
+            // Thêm @everyone option
+            filtered.push({
+                id: 'everyone',
+                username: 'everyone',
+                fullName: 'Tất cả thành viên',
+                avatar: '/images/group-icon.png',
+                role: 'SPECIAL',
+                isSpecial: true
+            });
+
+            // Chỉ thêm các thành viên khác (LOẠI TRỪ bản thân)
+            filtered.push(...pool.filter(p => p.id != currentUserId));
+        } else {
+            // Tìm kiếm theo query
+            const lowerQuery = query.toLowerCase();
+
+            // Kiểm tra @everyone
+            if ('everyone'.includes(lowerQuery) || 'tất cả'.includes(lowerQuery)) {
+                filtered.push({
+                    id: 'everyone',
+                    username: 'everyone',
+                    fullName: 'Tất cả thành viên',
+                    avatar: '/images/group-icon.png',
+                    role: 'SPECIAL',
+                    isSpecial: true
+                });
+            }
+
+            // Tìm kiếm trong danh sách thành viên (LOẠI TRỪ bản thân trừ khi cố tình tìm)
+            const memberResults = pool.filter(p => {
+                const matchesQuery = (p.fullName || '').toLowerCase().includes(lowerQuery) ||
+                    (p.username || '').toLowerCase().includes(lowerQuery);
+
+                // Nếu user cố tình gõ tên mình thì mới hiện
+                const isSearchingForSelf = currentUser && (
+                    (currentUser.fullName || '').toLowerCase().includes(lowerQuery) ||
+                    (currentUser.username || '').toLowerCase().includes(lowerQuery)
+                ) && p.id == currentUserId;
+
+                return matchesQuery && (p.id != currentUserId || isSearchingForSelf);
+            });
+
+            // Sắp xếp: nếu có bản thân (do cố tình tìm) thì lên đầu, sau đó theo tên
+            memberResults.sort((a, b) => {
+                if (a.id == currentUserId && b.id != currentUserId) return -1;
+                if (b.id == currentUserId && a.id != currentUserId) return 1;
+                return (a.fullName || '').localeCompare(b.fullName || '');
+            });
+
+            filtered.push(...memberResults);
+        }
+
         if (!filtered.length) {
             this.hideMentionSuggestions(convId);
             return;
         }
+
         const el = document.getElementById(`mentions-${convId}`);
-        el.innerHTML = filtered.map((p, i) => `
-  <div class="mention-item ${i === 0 ? 'selected' : ''}" data-username="${p.username}" onclick="chatManager.selectMention('${convId}', this)">
-    <img class="mention-avatar" src="${p.avatar || '/images/default-avatar.jpg'}">
-    <div class="mention-info">
-      <div class="mention-name">${this.escape(p.fullName)}</div>
-      <div class="mention-username">@${this.escape(p.username || '')}</div>
-    </div>
-    ${p.role === 'ADMIN' ? '<i class="fa-solid fa-crown mention-admin"></i>' : ''}
-  </div>
-`).join('');
+        el.innerHTML = filtered.map((p, i) => {
+            const displayName = p.isSpecial ? p.fullName :
+                (p.isCurrentUser ? p.fullName : p.fullName);
+            const usernameDisplay = p.isSpecial ? '@everyone' : `@${p.username || ''}`;
+            const avatarSrc = p.avatar || '/images/default-avatar.jpg';
+            const specialClass = p.isSpecial ? 'mention-special' : '';
+            const currentUserClass = p.isCurrentUser ? 'mention-current-user' : '';
+
+            return `
+        <div class="mention-item ${i === 0 ? 'selected' : ''} ${specialClass} ${currentUserClass}" 
+             data-username="${p.username}" 
+             data-is-special="${p.isSpecial || false}"
+             onclick="chatManager.selectMention('${convId}', this)">
+            <img class="mention-avatar" src="${avatarSrc}">
+            <div class="mention-info">
+                <div class="mention-name">${this.escape(displayName)}</div>
+                <div class="mention-username">${this.escape(usernameDisplay)}</div>
+            </div>
+            ${p.role === 'ADMIN' ? '<i class="fa-solid fa-crown mention-admin"></i>' : ''}
+            ${p.isSpecial ? '<i class="fa-solid fa-users mention-special-icon"></i>' : ''}
+        </div>
+        `;
+        }).join('');
+
         el.style.display = 'block';
     }
 
@@ -815,10 +975,19 @@ class ChatManager {
     selectMention(convId, el) {
         const ta = document.getElementById(`input-${convId}`);
         const username = el.getAttribute('data-username');
+        const isSpecial = el.getAttribute('data-is-special') === 'true';
+
         const val = ta.value;
         const before = val.substring(0, this._mentionStart);
         const after = val.substring(ta.selectionStart);
-        const mention = `@${username} `;
+
+        let mention;
+        if (isSpecial && username === 'everyone') {
+            mention = `@everyone `;
+        } else {
+            mention = `@${username} `;
+        }
+
         ta.value = before + mention + after;
         const pos = before.length + mention.length;
         ta.setSelectionRange(pos, pos);
@@ -1011,7 +1180,6 @@ function bindHeaderDropdown() {
 // Nâng cao (để mở rộng sau): tạo nhóm qua modal, tìm user… (đang dùng các API có sẵn)
 class EnhancedChatManager extends ChatManager {
 }
-
 function connectStompClient() {
     if (stompClient && stompClient.connected) return;
     const socket = new SockJS('/ws');
@@ -1022,24 +1190,35 @@ function connectStompClient() {
         if (isSubscribed) return;
         isSubscribed = true;
 
-        // Existing subscriptions...
+        // ✅ Subscribe unread message
         stompClient.subscribe("/user/queue/unread", (message) => {
             if (chatManager) {
                 chatManager.handleUnreadMessage(JSON.parse(message.body));
             }
         });
 
+        // ✅ Subscribe call invite
         stompClient.subscribe("/user/queue/call-invite", (message) => {
             console.log("Received call invite:", message.body);
             const invite = JSON.parse(message.body);
             const url = `/video_call/${invite.conversationId}?isIncoming=true&callerId=${invite.callerId}`;
-            window.open(url, `VideoPopup${invite.conversationId}`, 'width=1070,height=600,resizable=yes,scrollbars=no');
+            window.open(
+                url,
+                `VideoPopup${invite.conversationId}`,
+                'width=1070,height=600,resizable=yes,scrollbars=no'
+            );
         });
 
-        // NEW: Subscribe to auto-open chat notifications
+        // ✅ Subscribe auto-open chat notifications
         stompClient.subscribe("/user/queue/auto-open-chat", (message) => {
             const data = JSON.parse(message.body);
             handleAutoOpenChat(data);
+        });
+
+        // ✅ Thêm mới: Subscribe @everyone mention
+        stompClient.subscribe("/user/queue/everyone-mention", (message) => {
+            const data = JSON.parse(message.body);
+            handleEveryoneMentionNotification(data);
         });
 
     }, (error) => {
@@ -1195,6 +1374,110 @@ async function openChat(userId, name, avatar) {
     }
 }
 
+function handleEveryoneMentionNotification(data) {
+    console.log("Received @everyone mention:", data);
+
+    // Show notification
+    showEveryoneMentionNotification(data);
+
+    // Auto-open chat if user wants
+    setTimeout(() => {
+        if (confirm(`${data.senderName} đã nhắc @everyone trong "${data.conversationName}". Mở chat ngay?`)) {
+            openEveryoneMentionChat(data.conversationId, data.conversationName);
+        }
+    }, 1000);
+}
+
+function showEveryoneMentionNotification(data) {
+    const toastHtml = `
+        <div class="toast everyone-mention-toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
+            <div class="toast-header">
+                <img src="${data.senderAvatar || '/images/default-avatar.jpg'}" 
+                     class="rounded me-2" width="20" height="20" alt="Avatar">
+                <strong class="me-auto">${data.senderName}</strong>
+                <small class="text-muted">@everyone</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">
+                <i class="fas fa-users text-warning"></i> 
+                Đã nhắc @everyone trong "${data.conversationName}"
+                <div class="mt-2">
+                    <small class="text-muted">${data.message}</small>
+                </div>
+                <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary flex-fill" onclick="openEveryoneMentionChat(${data.conversationId}, '${data.conversationName}')">
+                        <i class="fas fa-comment"></i> Mở chat
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="dismissEveryoneMentionNotification(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    let toastContainer = document.getElementById('everyone-mention-toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'everyone-mention-toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '12000';
+        document.body.appendChild(toastContainer);
+    }
+
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+
+async function openEveryoneMentionChat(conversationId, conversationName) {
+    try {
+        if (chatManager) {
+            // Get conversation details
+            const response = await fetch(`/api/conversations`);
+            const conversations = await response.json();
+            const conversation = conversations.find(c => c.id == conversationId);
+
+            if (conversation) {
+                chatManager.openExistingConversation(
+                    conversationId,
+                    conversation.name || conversationName,
+                    conversation.avatar,
+                    conversation.type || 'group'
+                );
+            } else {
+                // Fallback
+                chatManager.openExistingConversation(
+                    conversationId,
+                    conversationName,
+                    '/images/default-group-avatar.jpg',
+                    'group'
+                );
+            }
+        }
+
+        // Close all @everyone notifications
+        document.querySelectorAll('.everyone-mention-toast').forEach(toast => {
+            const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+            bsToast.hide();
+        });
+
+    } catch (error) {
+        console.error('Error opening @everyone chat:', error);
+    }
+}
+
+function dismissEveryoneMentionNotification(button) {
+    const toast = button.closest('.toast');
+    const bsToast = bootstrap.Toast.getOrCreateInstance(toast);
+    bsToast.hide();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!chatManager) {

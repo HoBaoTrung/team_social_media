@@ -400,3 +400,70 @@ emoji-picker {
     font-weight: bold;
     margin-right: 2px;
 }
+
+/* Mention Special Styles */
+.mention-item.mention-special {
+    background: linear-gradient(135deg, #ff6b35, #f7931e);
+    color: white;
+    border-radius: 8px;
+    margin: 2px 0;
+}
+
+.mention-item.mention-special:hover,
+.mention-item.mention-special.selected {
+    background: linear-gradient(135deg, #ff5722, #e68a00);
+    transform: translateX(2px);
+}
+
+.mention-item.mention-current-user {
+    background: linear-gradient(135deg, #1877f2, #42a5f5);
+    color: white;
+    border-radius: 8px;
+    margin: 2px 0;
+}
+
+.mention-item.mention-current-user:hover,
+.mention-item.mention-current-user.selected {
+    background: linear-gradient(135deg, #1565c0, #1976d2);
+    transform: translateX(2px);
+}
+
+.mention-special-icon {
+    color: #ffeb3b;
+    font-size: 14px;
+    margin-left: auto;
+}
+
+.mention-item.mention-special .mention-name,
+.mention-item.mention-special .mention-username,
+.mention-item.mention-current-user .mention-name,
+.mention-item.mention-current-user .mention-username {
+    color: white;
+}
+
+/* Enhanced mention item hover effects */
+.mention-item {
+    transition: all 0.2s ease;
+    padding: 10px 12px;
+    margin: 1px 0;
+}
+
+.mention-item:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.mention-item.selected {
+    box-shadow: 0 0 0 2px #1877f2;
+    transform: translateX(2px);
+}
+
+/* Empty state for mentions */
+.mention-suggestions:empty::after {
+    content: "Không tìm thấy thành viên nào";
+    display: block;
+    text-align: center;
+    padding: 16px;
+    color: #65676b;
+    font-style: italic;
+}
