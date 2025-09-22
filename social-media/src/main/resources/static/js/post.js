@@ -13,6 +13,8 @@ class PostManager {
         this.submitBtn = document.getElementById("post-submit-btn");
         const container = document.getElementById('posts-container');
         this.username = container.getAttribute('data-username');
+        this.mentionScrollListener = null;
+        this.mentionScrollContainer = null;
         this.init();
     }
 
@@ -25,6 +27,15 @@ class PostManager {
         this.setupEventListeners();
         this.loadInitialPosts();
         this.setupInfiniteScroll();
+    }
+
+    cleanupMentionListeners() {
+        if (this.mentionScrollListener) {
+            this.mentionScrollContainer.removeEventListener('scroll', this.mentionScrollListener);
+            window.removeEventListener('resize', this.mentionScrollListener);
+            this.mentionScrollListener = null;
+            this.mentionScrollContainer = null;
+        }
     }
 
     handleSubmit() {
@@ -1502,6 +1513,7 @@ class PostManager {
 
         if (!match) {
             if (dropdown) dropdown.style.display = "none";
+            this.cleanupMentionListeners();
             return;
         }
 
@@ -1526,21 +1538,61 @@ class PostManager {
                 });
 
                 if (users.length > 0 && dropdown) {
-                    // Move dropdown to body to avoid clipping
+                    // Append to body if not already
                     if (dropdown.parentNode !== document.body) {
                         document.body.appendChild(dropdown);
                     }
 
-                    // Calculate position relative to input
-                    const rect = inputElement.getBoundingClientRect();
-                    dropdown.style.position = 'absolute';
-                    dropdown.style.zIndex = '10000';
-                    dropdown.style.top = `${rect.top + rect.height + window.scrollY - 45 }px`;
-                    dropdown.style.left = `${rect.left + window.scrollX}px`;
-                    dropdown.style.width = `${rect.width}px`;
+                    const updatePosition = () => {
+                        if (!inputElement.isConnected) {
+                            this.cleanupMentionListeners();
+                            dropdown.style.display = "none";
+                            return;
+                        }
+                        const rect = inputElement.getBoundingClientRect();
+                        dropdown.style.position = 'absolute';
+                        dropdown.style.padding = 0;
+                        dropdown.style.zIndex = '10000';
+                        dropdown.style.top = `${rect.bottom}px`;
+                        dropdown.style.left = `${rect.left + window.scrollX}px`;
+                        dropdown.style.width = `${rect.width}px`;
+                    };
+
+                    updatePosition();
                     dropdown.style.display = "block";
+
+                    // Thêm listener để ẩn dropdown khi click ngoài
+                    const handleClickOutside = (event) => {
+                        if (!dropdown.contains(event.target) && event.target !== inputElement) {
+                            dropdown.style.display = "none";
+                            this.cleanupMentionListeners();
+                            document.removeEventListener('mousedown', handleClickOutside);
+                        }
+                    };
+
+                    // Ngăn chặn propagation từ mention-item
+                    dropdown.querySelectorAll('.mention-item').forEach(item => {
+                        item.addEventListener('mousedown', (e) => e.stopPropagation());
+                    });
+
+                    document.addEventListener('mousedown', handleClickOutside);
+
+                    // Cập nhật vị trí khi scroll hoặc resize
+                    let scroller = inputElement.parentElement;
+                    while (scroller) {
+                        const style = getComputedStyle(scroller);
+                        if (style.overflow === 'auto' || style.overflowY === 'auto' || style.overflow === 'scroll' || style.overflowY === 'scroll') {
+                            break;
+                        }
+                        scroller = scroller.parentElement;
+                    }
+                    this.mentionScrollContainer = scroller || window;
+                    this.mentionScrollListener = updatePosition;
+                    this.mentionScrollContainer.addEventListener('scroll', this.mentionScrollListener);
+                    window.addEventListener('resize', this.mentionScrollListener);
                 } else {
                     if (dropdown) dropdown.style.display = "none";
+                    this.cleanupMentionListeners();
                 }
             });
     }
@@ -1572,6 +1624,7 @@ class PostManager {
                 break;
             case 'Escape':
                 dropdown.style.display = 'none';
+                this.cleanupMentionListeners();
                 break;
         }
     }
@@ -1597,7 +1650,10 @@ function addMention(postId, user, inputElement, key) {
     }
 
     const dropdown = document.getElementById(`mentions-dropdown-${key}`);
-    if (dropdown) dropdown.style.display = "none";
+    if (dropdown) {
+        dropdown.style.display = "none";
+        postManager.cleanupMentionListeners(); // Dọn dẹp listener
+    }
 }
 
 let stompClient = null;
