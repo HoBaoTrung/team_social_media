@@ -322,6 +322,8 @@
     .user-name {
         font-size: 18px;
         order: 1; /* Đảm bảo user-name ở trên */
+        position: static;
+        bottom: auto;
     }
 
     .button-group {
@@ -329,6 +331,8 @@
         flex-direction: initial;
         width: 100%;
         gap: 8px;
+        position: static;
+        bottom: auto;
     }
 
     .profile-tabs {
@@ -361,7 +365,7 @@
     }
 
     .avatar-container {
-        bottom: -115px;
+        top: 110px;
         left: 10px;
     }
 

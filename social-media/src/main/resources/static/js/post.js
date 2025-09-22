@@ -308,22 +308,24 @@ class PostManager {
                     </div>
                     ${post.canEdit || post.canDelete ? `
                        <!-- Dropdown -->
-                        <button class="btn btn-light btn-sm" type="button" id="dropdownMenuButton" 
-                                  data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-ellipsis-h"></i>
-                          </button>
-                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                            <li>
-                             ${post.canEdit ? `<button class="dropdown-item" onclick="postManager.editPost(${post.id})">
-                                    <i class="fas fa-edit"></i> Chỉnh sửa
-                                </button>` : ''}
-                            </li>
-                            <li>
-                                ${post.canDelete ? `<button  class="dropdown-item text-danger" onclick="postManager.deletePost(${post.id})">
-                                    <i class="fas fa-trash"></i> Xóa
-                                </button >` : ''}
-                            </li>
-                          </ul>
+                      <div class="dropdown" >
+                            <button class="btn btn-light btn-sm" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-ellipsis-h"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    ${post.canEdit ? `<button class="dropdown-item" onclick="postManager.editPost(${post.id})">
+                                        <i class="fas fa-edit"></i> Chỉnh sửa
+                                    </button>` : ''}
+                                </li>
+                                <li>
+                                    ${post.canDelete ? `<button class="dropdown-item text-danger" onclick="postManager.deletePost(${post.id})">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </button>` : ''}
+                                </li>
+                            </ul>
+                      </div>
                     ` : ''}
                 </div>
                 
