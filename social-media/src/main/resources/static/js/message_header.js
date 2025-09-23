@@ -341,8 +341,8 @@ class MessageDropdown {
                     body: formData
                 });
                 const uploadResult = await uploadResponse.json(); // Giả sử server trả về { success: true, avatar: newUrl }
-                if (uploadResult.success && uploadResult.avatar) {
-                    avatarUrl = uploadResult.avatar; // Cập nhật avatar mới
+                if (uploadResult.success && uploadResult.avatarUrl) {
+                    avatarUrl = uploadResult.avatarUrl; // Cập nhật avatar mới
                 }
                 this.modal.hide();
                 if (window.chatManager) {

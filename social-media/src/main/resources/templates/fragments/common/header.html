@@ -168,7 +168,17 @@
                          style="max-height: 200px; overflow-y: auto;"></div>
                     <div class="small text-muted">Đã chọn: <span id="cg-picked">0</span> người</div>
                     <label class="form-label mt-3">Ảnh nhóm (tuỳ chọn)</label>
-                    <input id="cg-avatar" type="file" accept="image/*" class="form-control">
+                    <input id="cg-avatar" type="file" accept="image/*" class="form-control" onchange="previewGroupAvatar(event)">
+                    <div id="cg-avatar-preview" class="text-center mt-3" style="display:none;">
+                        <img id="cg-avatar-img"
+                             src=""
+                             alt="Preview avatar"
+                             class="rounded-circle shadow-sm border"
+                             style="width: 120px; height: 120px; object-fit: cover;">
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGroupAvatar()">Xóa ảnh</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
@@ -185,6 +195,32 @@
     </script>
 
     <script>
+        function previewGroupAvatar(event) {
+            const file = event.target.files[0];
+            const previewDiv = document.getElementById("cg-avatar-preview");
+            const img = document.getElementById("cg-avatar-img");
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    previewDiv.style.display = "block";
+                }
+                reader.readAsDataURL(file);
+            } else {
+                previewDiv.style.display = "none";
+            }
+        }
+
+        function removeGroupAvatar() {
+            const input = document.getElementById("cg-avatar");
+            const previewDiv = document.getElementById("cg-avatar-preview");
+            const img = document.getElementById("cg-avatar-img");
+
+            input.value = "";
+            img.src = "";
+            previewDiv.style.display = "none";
+        }
         // --- Helpers / constants ở global scope ---
         const BOOTSTRAP_TOGGLE_SELECTOR = '[data-bs-toggle="dropdown"], .dropdown-toggle';
         window.getBootstrapToggles = () => Array.from(document.querySelectorAll(BOOTSTRAP_TOGGLE_SELECTOR));

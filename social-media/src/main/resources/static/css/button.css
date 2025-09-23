@@ -1,4 +1,4 @@
-button {
+button:not(.chat-btn) {
     position: relative;
     font-weight: bold;
     text-transform: uppercase;
@@ -15,7 +15,7 @@ button {
     0 3px 6px rgba(0, 0, 0, 0.1);
 }
 
-button::before {
+button:not(.chat-btn)::before {
     content: '';
     position: absolute;
     top: 0;
@@ -28,18 +28,18 @@ button::before {
     transition: .5s all ease;
 }
 
-button:hover,
-button:focus {
+button:not(.chat-btn):hover,
+button:not(.chat-btn):focus {
     color: #fff;
 }
 
-button:hover:before,
-button:focus::before {
+button:not(.chat-btn):hover::before,
+button:not(.chat-btn):focus::before {
     left: 0;
     right: 0;
     opacity: 1;
 }
 
-button:active {
+button:not(.chat-btn):active {
     transform: scale(0.9);
 }
