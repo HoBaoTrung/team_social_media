@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.dto;
 
+import com.codegym.socialmedia.annotation.MinAge;
 import com.codegym.socialmedia.annotation.Unique;
 import com.codegym.socialmedia.general_interface.NormalRegister;
 import com.codegym.socialmedia.model.account.User;
@@ -45,6 +46,7 @@ public class UserRegistrationDto {
     private String phone;
 
     @Past(message = "Ngày sinh phải là ngày trong quá khứ")
+    @MinAge(16)
     private LocalDate dateOfBirth;
 
     private String firstName;

@@ -1,16 +1,17 @@
 package com.codegym.socialmedia.dto;
 
+import com.codegym.socialmedia.annotation.MinAge;
 import com.codegym.socialmedia.annotation.Unique;
 import com.codegym.socialmedia.general_interface.NormalRegister;
 import com.codegym.socialmedia.model.account.User;
 import jakarta.persistence.Lob;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -39,6 +40,10 @@ public class UserUpdateDto {
     private String firstName;
     @Size(max = 50)
     private String lasttName;
+    @Past(message = "Ngày sinh phải là ngày trong quá khứ")
+    @MinAge(16)
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dateOfBirth;
     public UserUpdateDto (User user){
         this.id = user.getId();
         this.username = user.getUsername();
@@ -48,6 +53,7 @@ public class UserUpdateDto {
         this.avatarUrl = user.getProfilePicture();
         this.firstName = user.getFirstName();
         this.lasttName = user.getLastName();
+        this.dateOfBirth = user.getDateOfBirth();
     }
 
     public User toUser(User user) {
@@ -57,6 +63,7 @@ public class UserUpdateDto {
         user.setBio(this.bio);
         user.setFirstName(this.firstName);
         user.setLastName(this.lasttName);
+        user.setDateOfBirth(this.dateOfBirth);
         return user;
     }
 }

@@ -88,7 +88,7 @@
             </div>
             <div class="info-item" th:if="${canViewDob}">
                 <strong><i class="fas fa-birthday-cake"></i> Sinh nhật:</strong>
-                <span th:text="${user.dateOfBirth}">01/01/1990</span>
+                <span th:text="${#temporals.format(user.dateOfBirth, 'dd-MM-yyyy')}">01/01/1990</span>
             </div>
             <div class="info-item" th:if="${canViewBio}">
                 <strong><i class="fas fa-user-edit"></i> Giới thiệu:</strong><br>

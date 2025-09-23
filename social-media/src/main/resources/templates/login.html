@@ -35,8 +35,10 @@
             <input type="text" th:field="*{phone}" placeholder="Số điện thoại">
             <span th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}" class="error-message"></span>
 
-            <input type="date" th:field="*{dateOfBirth}" placeholder="Ngày sinh">
-            <span th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}" class="error-message"></span>
+            <input type="date" th:field="*{dateOfBirth}"
+                   th:attr="max=${#temporals.format(#temporals.createNow().minusYears(16),'yyyy-MM-dd')}"
+                   placeholder="Ngày sinh">
+            <span th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}"  class="error-message"></span>
 
             <input type="password" th:field="*{password}" placeholder="Mật khẩu *">
             <span th:if="${#fields.hasErrors('password')}" th:errors="*{password}" class="error-message"></span>
