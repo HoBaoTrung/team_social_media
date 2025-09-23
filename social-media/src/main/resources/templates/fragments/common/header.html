@@ -183,7 +183,50 @@
         const currentUserId = /*[[${#authentication.principal.id}]]*/ null;
         /*]]>*/
     </script>
+
     <script>
+        // --- Helpers / constants ở global scope ---
+        const BOOTSTRAP_TOGGLE_SELECTOR = '[data-bs-toggle="dropdown"], .dropdown-toggle';
+        window.getBootstrapToggles = () => Array.from(document.querySelectorAll(BOOTSTRAP_TOGGLE_SELECTOR));
+
+        function closeAllDropdowns(except = null) {
+            const toggles = (typeof window.getBootstrapToggles === 'function')
+                ? window.getBootstrapToggles()
+                : Array.from(document.querySelectorAll(BOOTSTRAP_TOGGLE_SELECTOR));
+
+            toggles.forEach(toggle => {
+                try {
+                    if (except && except.closest && toggle.closest && except.closest('.dropdown') === toggle.closest('.dropdown')) {
+                        return;
+                    }
+                    if (toggle === except) return;
+
+                    const inst = bootstrap.Dropdown.getOrCreateInstance(toggle);
+                    inst.hide();
+                } catch (err) {
+                    // ignore bootstrap-related errors
+                }
+            });
+
+            const messageDropdownEl =
+                (window.messageDropdown && window.messageDropdown.messageDropdown)
+                || window.messageDropdownEl
+                || document.getElementById('messageDropdown');
+
+            const messageIconEl =
+                (window.messageDropdown && window.messageDropdown.messageIcon)
+                || window.messageIconEl
+                || document.getElementById('messageIcon');
+
+            if (messageDropdownEl) {
+                const keepOpen = except === messageDropdownEl || except === messageIconEl
+                    || (except && except.closest && except.closest('#messageIcon'));
+                if (!keepOpen && messageDropdownEl.classList.contains('show')) {
+                    messageDropdownEl.classList.remove('show');
+                }
+            }
+        }
+
         function activateNavLinks() {
             const navLinks = document.querySelectorAll(".nav-link");
             const currentPath = window.location.pathname;
@@ -194,92 +237,42 @@
             });
         }
 
-    </script>
-    <script type="module" th:src="@{/js/chat.js}"></script>
-    <script type="module" th:src="@{/js/notification.js}"></script>
-    <script th:src="@{/js/message_header.js}"></script>
-    <script>
         document.addEventListener("DOMContentLoaded", () => {
             activateNavLinks();
-            // Khởi tạo tooltip cho tất cả elements có title
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-            tooltipTriggerList.map(function (el) {
-                return new bootstrap.Tooltip(el, {
-                    placement: 'bottom',          // luôn nằm dưới
+
+            // Khởi tạo tooltip (sửa để không bị tạo trùng)
+            document.querySelectorAll('[title]').forEach(el => {
+                const existing = bootstrap.Tooltip.getInstance(el);
+                if (existing) {
+                    existing.dispose(); // hủy trước nếu đã tồn tại
+                }
+                new bootstrap.Tooltip(el, {
+                    placement: 'bottom',
                     fallbackPlacements: [],
                     trigger: 'hover'
                 });
             });
 
-            const messageIcon = document.getElementById('messageIcon');
-            const messageDropdown = document.getElementById('messageDropdown');
+            window.messageIconEl = document.getElementById('messageIcon');
+            window.messageDropdownEl = document.getElementById('messageDropdown');
 
-            const BOOTSTRAP_TOGGLE_SELECTOR = '[data-bs-toggle="dropdown"], .dropdown-toggle';
-
-            const getBootstrapToggles = () => Array.from(document.querySelectorAll(BOOTSTRAP_TOGGLE_SELECTOR));
-
-            function closeAllDropdowns(except = null) {
-                // 1) đóng tất cả Bootstrap dropdown (trừ except nếu except thuộc cùng .dropdown)
-                getBootstrapToggles().forEach(toggle => {
-                    try {
-                        // nếu except nằm trong cùng .dropdown với toggle thì skip
-                        if (except && except.closest && toggle.closest && except.closest('.dropdown') === toggle.closest('.dropdown')) {
-                            return;
-                        }
-                        // nếu except chính là toggle thì skip
-                        if (toggle === except) return;
-
-                        // hide nếu có instance (dùng getOrCreateInstance an toàn)
-                        const inst = bootstrap.Dropdown.getOrCreateInstance(toggle);
-                        inst.hide();
-                    } catch (err) {
-                        // ignore errors from bootstrap if any toggle isn't standard
-                        // console.debug(err);
-                    }
-                });
-
-                // 2) đóng custom messageDropdown (trừ khi except là messageIcon hoặc messageDropdown)
-                if (messageDropdown) {
-                    const keepOpen = except === messageDropdown || except === messageIcon
-                        || (except && except.closest && except.closest('#messageIcon'));
-                    if (!keepOpen && messageDropdown.classList.contains('show')) {
-                        messageDropdown.classList.remove('show');
-                    }
-                }
+            if (window.messageIconEl) {
+                window.messageIconEl.removeAttribute('data-bs-toggle');
+                window.messageIconEl.removeAttribute('data-bs-target');
             }
 
-            // Khi một Bootstrap dropdown sắp mở -> đóng hết dropdown khác trước (giữ lại dropdown đang mở)
             document.addEventListener('show.bs.dropdown', (ev) => {
-                // ev.target thường là phần tử toggle (button/a)
                 const toggle = ev.target;
-                // đóng tất cả khác, để dropdown này mở bình thường
                 closeAllDropdowns(toggle);
             });
 
-            // Xử lý toggle cho messageIcon (custom dropdown)
-            if (messageIcon) {
-                messageIcon.addEventListener('click', (e) => {
-                    e.stopPropagation(); // ngăn click bubble ra document (để không bị đóng ngay)
-                    const isOpen = messageDropdown && messageDropdown.classList.contains('show');
-
-                    // đóng các dropdown bootstrap khác (với except = messageIcon để giữ chat nếu cần)
-                    closeAllDropdowns(messageIcon);
-
-                    // toggle custom dropdown
-                    if (messageDropdown) messageDropdown.classList.toggle('show', !isOpen);
-                });
-            }
-
-            // Click ngoài -> đóng tất cả
             document.addEventListener('click', (e) => {
-                // nếu click nằm trong một dropdown bootstrap hoặc trong messageIcon/messageDropdown thì không đóng
                 if (e.target.closest('.dropdown') || e.target.closest('#messageIcon') || e.target.closest('#messageDropdown')) {
                     return;
                 }
                 closeAllDropdowns();
             });
 
-            // ESC để đóng
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' || e.key === 'Esc') closeAllDropdowns();
             });
@@ -287,6 +280,7 @@
             document.querySelectorAll('.developing').forEach(item => {
                 item.addEventListener('click', function (e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     Swal.fire({
                         icon: 'info',
                         title: 'Đang phát triển',
@@ -295,8 +289,11 @@
                     });
                 });
             });
-
         });
     </script>
 
+
+    <script type="module" th:src="@{/js/chat.js}"></script>
+    <script type="module" th:src="@{/js/notification.js}"></script>
+    <script th:src="@{/js/message_header.js}"></script>
 </header>

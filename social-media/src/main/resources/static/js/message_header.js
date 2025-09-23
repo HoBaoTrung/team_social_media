@@ -35,21 +35,8 @@ class MessageDropdown {
         this.messageIcon.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            closeAllDropdowns(this.messageIcon); // Close other dropdowns before toggling this one
             this.toggleDropdown();
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!this.messageIcon.contains(e.target) && !this.messageDropdown.contains(e.target)) {
-                this.closeDropdown();
-            }
-        });
-
-        // Handle escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isOpen) {
-                this.closeDropdown();
-            }
         });
     }
 
