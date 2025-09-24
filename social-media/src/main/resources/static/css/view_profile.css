@@ -72,8 +72,9 @@
     color: #1876f2;
 }
 
-.tab:hover:before {
-    left: 100%;
+.tab:hover {
+    transform: scale(1.05);
+    color: #1876f2;
 }
 
 /* === LAYOUT 2 CỘT === */

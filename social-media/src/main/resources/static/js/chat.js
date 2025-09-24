@@ -513,7 +513,7 @@ class ChatManager {
             const previewBox = document.getElementById(`preview-${chatId}`);
             if (previewBox) {
                 previewBox.innerHTML = '';
-                files.forEach((f, index) => {
+                this.pendingFiles[chatId].forEach((f, index) => {
                     const ext = f.name.split('.').pop().toLowerCase();
                     const div = document.createElement("div");
                     div.className = "file-preview";
@@ -546,10 +546,16 @@ class ChatManager {
                     info.innerText = `${f.name} (${(f.size / 1024).toFixed(1)} KB)`;
                     const removeBtn = document.createElement("button");
                     removeBtn.className = "remove-btn";
-                    removeBtn.innerText = "";
+                    removeBtn.innerText = "Xóa";
                     removeBtn.title = "Xóa file này";
                     removeBtn.onclick = () => {
-                        files.splice(index, 1);
+                        // Tìm đúng vị trí của file trong mảng
+                        const idx = this.pendingFiles[chatId].indexOf(f);
+                        if (idx !== -1) {
+                            this.pendingFiles[chatId].splice(idx, 1);
+                        }
+
+                        // Xóa phần tử preview
                         div.remove();
                     };
                     div.appendChild(previewEl);

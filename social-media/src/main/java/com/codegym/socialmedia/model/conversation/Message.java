@@ -1,6 +1,8 @@
 package com.codegym.socialmedia.model.conversation;
 
 import com.codegym.socialmedia.model.account.User;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +22,7 @@ public class Message {
 
     @ManyToOne
     @JoinColumn(name = "conversation_id")
+    @JsonBackReference
     private Conversation conversation;
 
     @ManyToOne
@@ -29,6 +32,7 @@ public class Message {
     private String content;
 
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<MessageAttachment> attachments = new ArrayList<>();
 
     private LocalDateTime sentAt;

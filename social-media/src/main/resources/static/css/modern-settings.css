@@ -325,21 +325,6 @@ body {
     text-align: right;
 }
 
-.btn-primary {
-    background: #1877f2;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    min-width: 120px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
 
 .btn-primary:hover {
     background: #166fe5;

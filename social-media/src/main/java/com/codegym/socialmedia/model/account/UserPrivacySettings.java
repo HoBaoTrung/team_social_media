@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "user_privacy_settings")
@@ -61,5 +62,16 @@ public class UserPrivacySettings {
     private boolean canBeFound = true;
     // Tùy chọn kết bạn
     private boolean allowFriendRequests = true;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UserPrivacySettings)) return false;
+        UserPrivacySettings other = (UserPrivacySettings) o;
+        return id != null && id.equals(other.id);
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

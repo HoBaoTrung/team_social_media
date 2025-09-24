@@ -1,6 +1,7 @@
 package com.codegym.socialmedia.model.conversation;
 
 import com.codegym.socialmedia.model.account.User;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -44,6 +45,7 @@ public class Conversation {
     private List<ConversationParticipant> participants;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<Message> messages;
 
     public enum ConversationType {

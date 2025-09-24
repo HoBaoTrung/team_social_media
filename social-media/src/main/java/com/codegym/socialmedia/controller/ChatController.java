@@ -230,6 +230,7 @@ public class ChatController {
             return ResponseEntity.badRequest().body(res);  // Changed to badRequest for client errors
         }
     }
+
     private String getFileType(String contentType) {
         if (contentType == null) return "FILE";
         if (contentType.startsWith("image")) return "IMAGE";

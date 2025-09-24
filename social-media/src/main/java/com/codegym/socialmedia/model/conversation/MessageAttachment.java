@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.model.conversation;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class MessageAttachment {
 
     @ManyToOne
     @JoinColumn(name = "message_id")
+    @JsonBackReference
     private Message message;
 
     @Enumerated(EnumType.STRING)
