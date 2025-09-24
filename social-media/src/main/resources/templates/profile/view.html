@@ -176,15 +176,14 @@
     <div class="card-box profile-content" th:if="${filter == 'all' or filter == 'mutual' }">
         <input type="hidden" id="targetUserId" th:value="${targetUserId}"/>
         <input type="hidden" id="filterValue" th:value="${filter}"/>
-        <div class="row" id="friends-list">
-            <div class="col-md-3" th:each="friend : ${friends}">
-                <th:block
-                        th:insert="~{fragments/friend/friendCard :: friendCard(friend=${friend}, nameClass='name-list-friend')}">
-                </th:block>
+        <div class="row" id="friends-list"></div>
+        <div id="no-friend" class="text-center py-5 text-muted" style="display: none;">
+            <div class="mb-3">
+                <i class="fas fa-user-friends fa-3x"></i>
             </div>
-        </div>
-        <div class="loading" id="loading">
-            <i class="fas fa-spinner fa-spin"></i> Đang tải...
+            <h5>Chưa có bạn bè</h5>
+            <p th:if="${isOwner}">Hãy kết thêm bạn nào!</p>
+            <p th:unless="${isOwner}" th:text="${user.firstName + ' chưa có bạn nào.'}"></p>
         </div>
     </div>
 </div>
@@ -232,7 +231,7 @@
 <script type="module" th:src="@{/js/post.js}"></script>
 <script type="module" th:src="@{/js/profile-posts.js}"></script>
 <script th:src="@{/js/friend-button.js}"></script>
-
+<script th:src="@{/js/load-friend.js}"></script>
 <script th:inline="javascript">
     function openChatFromButton(btn) {
         const id = btn.dataset.userId;

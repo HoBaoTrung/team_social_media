@@ -81,6 +81,12 @@ function loadMoreFriends() {
         url: url,
         method: 'GET',
         success: function (data) {
+            if (data.totalElements == 0){
+                const el = document.getElementById("no-friend");
+                el.style.display = 'block';
+                return;
+            }
+
             if (!data.content || data.content.length === 0 || page >= data.totalPages) {
                 hasMoreData = false;
                 $('#loading').hide();
