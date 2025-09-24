@@ -47,7 +47,6 @@ function loadMoreFriends() {
 
     isLoading = true;
     $('#loading').show();
-
     let url;
     switch (currentFilter) {
         case 'all':
@@ -70,7 +69,7 @@ function loadMoreFriends() {
         case 'received-requests':
             url = `/api/friends/received-requests?page=${page}&size=${size}`;
             friendshipStatus = 'PENDING';
-            isReceiver = true
+            isReceiver = true;
             break;
         default:
             url = `/api/friends?targetUserId=${targetUserId}&page=${page}&size=${size}`;
@@ -83,7 +82,12 @@ function loadMoreFriends() {
         success: function (data) {
             if (data.totalElements == 0){
                 const el = document.getElementById("no-friend");
-                el.style.display = 'block';
+                if(el)  el.style.display = 'block';
+                const noData = document.getElementById("no-data");
+                if(noData)  noData.style.display = 'block';
+                hasMoreData = false;
+                $('#loading').hide();
+                isLoading = false;
                 return;
             }
 
