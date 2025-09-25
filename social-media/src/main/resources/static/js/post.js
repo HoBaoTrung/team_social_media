@@ -409,11 +409,11 @@ class PostManager {
             <div class="post-images">
                 <div class="post-images-single">
                     ${isVideo(mediaUrl)
-                ? `<video controls class="post-video">
-                               <source src="${mediaUrl}" type="video/${mediaUrl.split('.').pop()}">
-                               Trình duyệt của bạn không hỗ trợ video.
-                           </video>`
-                : `<img src="${mediaUrl}" alt="Post image" onclick="postManager.viewImage('${mediaUrl}')">`}
+                ? `<video controls class="post-media" loading="lazy">
+                           <source src="${mediaUrl}" type="video/${mediaUrl.split('.').pop()}">
+                           Trình duyệt của bạn không hỗ trợ video.
+                       </video>`
+                : `<img src="${mediaUrl}" alt="Post image" class="post-media" loading="lazy" onclick="postManager.viewImage('${mediaUrl}')">`}
                 </div>
             </div>
         `;
@@ -435,11 +435,11 @@ class PostManager {
                 ? `onclick="postManager.viewImages(${JSON.stringify(imageUrls).replace(/"/g, '&quot;')}, ${i})"`
                 : ''}>
                 ${isVideo(mediaUrl)
-                ? `<video controls class="post-video">
+                ? `<video controls class="post-media" loading="lazy">
                            <source src="${mediaUrl}" type="video/${mediaUrl.split('.').pop()}">
                            Trình duyệt của bạn không hỗ trợ video.
                        </video>`
-                : `<img src="${mediaUrl}" alt="Post image">`}
+                : `<img src="${mediaUrl}" alt="Post image" class="post-media" loading="lazy">`}
             </div>
         `;
         }
