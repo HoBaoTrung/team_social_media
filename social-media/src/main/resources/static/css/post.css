@@ -1078,3 +1078,9 @@ video:-ms-fullscreen {
         max-height: 300px;
     }
 }
+
+.mention {
+    color: #1877f2;   /* xanh Facebook */
+    font-weight: 500;
+    cursor: pointer;
+}
