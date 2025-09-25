@@ -19,7 +19,7 @@ import java.util.Map;
 
 
 @RestController
-@RequestMapping("/api/comments")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class CommentController {
     @Autowired
@@ -30,7 +30,7 @@ public class CommentController {
     @Autowired
     private FriendshipService friendshipService;
 
-    @PostMapping("/add")
+    @PostMapping("/comments/add")
     public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
         PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentionedUserIds());
 
@@ -41,21 +41,27 @@ public class CommentController {
         return newComment;
     }
 
-    @GetMapping("/{postId}")
+    @GetMapping("/comments/{postId}")
     public Page<DisplayCommentDTO> getComments(@PathVariable Long postId,
                                                @RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "10") int size) {
         return postCommentService.getCommentsByPost(postId, userService.getCurrentUser(), page, size);
     }
 
-    @PutMapping("/{id}")
+    @GetMapping("/comment/{id}")
+    public DisplayCommentDTO getComment(@PathVariable Long id) {
+        PostComment comment = postCommentService.getCommentById(id).orElse(null);
+        return DisplayCommentDTO.mapToDTO(comment, userService.getCurrentUser(),friendshipService);
+    }
+
+    @PutMapping("/comments/{id}")
     public DisplayCommentDTO editComment(@RequestBody CommentRequest req, @PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
         PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent(),req.getMentionedUserIds());
         return DisplayCommentDTO.mapToDTO(updated, currentUser,friendshipService); // trả về DTO với quyền
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/comments/{id}")
     public ResponseEntity<?> deleteComment(@PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
 
@@ -75,7 +81,7 @@ public class CommentController {
         }
     }
 
-    @PostMapping("/like/{id}")
+    @PostMapping("/comments/like/{id}")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> toggleLikeComment(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
@@ -102,7 +108,7 @@ public class CommentController {
         }
     }
 
-    @PostMapping("/{commentId}/reply")
+    @PostMapping("/comments/{commentId}/reply")
     public ResponseEntity<?> replyToComment(
             @PathVariable Long commentId,
             @RequestBody CommentRequest req) {

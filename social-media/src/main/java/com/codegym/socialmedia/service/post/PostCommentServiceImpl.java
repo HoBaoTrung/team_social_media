@@ -123,7 +123,8 @@ public class PostCommentServiceImpl implements PostCommentService {
     // ================== HÀM DÙNG CHUNG ==================
     private void handleMentions(PostComment comment, User author, List<Long> mentionIds) {
         if (mentionIds != null && !mentionIds.isEmpty()) {
-            for (long mentionedUserId : mentionIds) {
+            for (Long mentionedUserId : mentionIds) {
+                if (mentionedUserId == null) continue;
                 User u = userRepository.findById(mentionedUserId)
                         .orElseThrow(() -> new RuntimeException("User not found"));
                 CommentMention cm = new CommentMention();

@@ -1142,7 +1142,7 @@ class PostManager {
         const originalElement = commentTextEl.cloneNode(true);
 
         try {
-            const response = await fetch(`/api/comments/${commentId}`);
+            const response = await fetch(`/api/comment/${commentId}`);
             if (!response.ok) throw new Error('Failed to fetch comment');
             const comment = await response.json();
 
@@ -1154,35 +1154,66 @@ class PostManager {
             input.setAttribute('onkeydown', `postManager.handleMentionKeyDown(event, ${postId}, 'edit-${commentId}')`);
             input.setAttribute('oninput', `postManager.showMentionSuggestions(${postId}, this, 'edit-${commentId}')`);
 
-            // Chuyển đổi mentions hiện có thành span
-            const mentionMap = new Map(comment.mentionUsers.map(u => [u.fullName.toLowerCase(), u]));
-            let remaining = comment.comment;
-            const regexPatterns = comment.mentionUsers.map(u => `@${u.fullName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`).join('|');
-            const regexGlobal = new RegExp(regexPatterns, 'gi');
-            let lastIndex = 0;
-            let match;
-            while ((match = regexGlobal.exec(remaining)) !== null) {
-                const textBefore = remaining.substring(lastIndex, match.index);
-                if (textBefore) input.appendChild(document.createTextNode(textBefore));
+            const mentionUsers = comment.mentions || [];
+            let commentContent = comment.comment || "";
 
-                const matchedText = match[0];
-                const fullName = matchedText.substring(1).replace(/(?![\\w])$/, ''); // remove trailing non-word if any, but regex already has
-                const user = mentionMap.get(fullName.toLowerCase());
-                if (user) {
-                    const span = document.createElement('span');
-                    span.className = 'mention';
-                    span.contentEditable = 'false';
-                    span.dataset.userId = user.id;
-                    span.textContent = matchedText;
-                    input.appendChild(span);
-                } else {
-                    input.appendChild(document.createTextNode(matchedText));
-                }
+            // --- 1. Nếu backend trả về HTML có <a class="mention"> ---
+            if (commentContent.includes("<a") && commentContent.includes("class=\"mention\"")) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = commentContent;
 
-                lastIndex = match.index + match[0].length;
+                tempDiv.childNodes.forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        input.appendChild(document.createTextNode(node.textContent));
+                    } else if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('mention')) {
+                        const span = document.createElement('span');
+                        span.className = 'mention';
+                        span.contentEditable = 'false';
+                        span.dataset.userId = node.dataset.userId || node.getAttribute("data-userid");
+                        span.textContent = node.textContent;
+                        input.appendChild(span);
+                    } else {
+                        input.appendChild(node.cloneNode(true));
+                    }
+                });
             }
-            const textAfter = remaining.substring(lastIndex);
-            if (textAfter) input.appendChild(document.createTextNode(textAfter));
+            // --- 2. Nếu backend trả về plain text có @mention ---
+            else if (mentionUsers.length > 0) {
+                const mentionMap = new Map(mentionUsers.map(u => [u.fullName.toLowerCase(), u]));
+                const regexPatterns = mentionUsers
+                    .map(u => `@${u.fullName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`)
+                    .join('|');
+                const regexGlobal = new RegExp(regexPatterns, 'gi');
+
+                let lastIndex = 0, match;
+                while ((match = regexGlobal.exec(commentContent)) !== null) {
+                    const textBefore = commentContent.substring(lastIndex, match.index);
+                    if (textBefore) input.appendChild(document.createTextNode(textBefore));
+
+                    const matchedText = match[0];
+                    const fullName = matchedText.substring(1);
+                    const user = mentionMap.get(fullName.toLowerCase());
+
+                    if (user) {
+                        const span = document.createElement('span');
+                        span.className = 'mention';
+                        span.contentEditable = 'false';
+                        span.dataset.userId = user.id;
+                        span.textContent = matchedText;
+                        input.appendChild(span);
+                    } else {
+                        input.appendChild(document.createTextNode(matchedText));
+                    }
+
+                    lastIndex = match.index + match[0].length;
+                }
+                const textAfter = commentContent.substring(lastIndex);
+                if (textAfter) input.appendChild(document.createTextNode(textAfter));
+            }
+            // --- 3. Nếu không có mention ---
+            else {
+                input.textContent = commentContent;
+            }
 
             commentTextEl.replaceWith(input);
 
@@ -1213,7 +1244,12 @@ class PostManager {
                 if (!newContent) return;
 
                 try {
-                    const mentionedUserIds = [...new Set(Array.from(input.querySelectorAll('.mention')).map(span => parseInt(span.dataset.userId)))];
+                    const mentionedUserIds = [...new Set(
+                        Array.from(input.querySelectorAll('.mention'))
+                            .map(span => parseInt(span.dataset.userId, 10))
+                            .filter(id => id !== null && id !== undefined && !isNaN(id))
+                    )];
+
                     const response = await fetch(`/api/comments/${commentId}`, {
                         method: 'PUT',
                         headers: {
@@ -1236,7 +1272,6 @@ class PostManager {
                     saveBtn.remove();
                     cancelBtn.remove();
 
-                    // Remove dropdown
                     dropdown.remove();
                     commentBody.style.position = '';
 
@@ -1250,13 +1285,13 @@ class PostManager {
 
             // Hủy sửa
             cancelBtn.addEventListener('click', () => {
-                // Trả lại phần tử gốc
                 input.replaceWith(originalElement);
                 saveBtn.remove();
                 cancelBtn.remove();
                 dropdown.remove();
                 commentBody.style.position = '';
             });
+
         } catch (error) {
             console.error('Error loading comment for edit:', error);
             this.showNotification('Không thể tải thông tin bình luận', 'error');
