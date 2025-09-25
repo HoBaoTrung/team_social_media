@@ -908,7 +908,7 @@ class PostManager {
             if (!append) $container.empty();
 
             (data.content || []).forEach(c => {
-                this.appendCommentToUI(postId, c, 'push');
+                this.appendCommentToUI(postId, c, 'append');
             });
 
             // cập nhật phân trang
