@@ -245,10 +245,14 @@
 }
 /* Input */
 .chat-input { padding: 8px; border-top: 1px solid #eef0f3; background: #fff }
-.input-wrap { display: flex; align-items: flex-end; gap: 8px; position: relative; }
+.input-wrap { display: flex; align-items: center;  position: relative; }
 .input-wrap textarea {
     flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 8px 10px;
     resize: none; max-height: 100px; min-height: 24px; outline: none; background: #fff;
+}
+.input-icons {
+    display: flex;
+    align-items: center;
 }
 .input-icons .input-icon { margin-left: 8px; color: #1877f2; cursor: pointer; }
 .input-icons .input-icon:hover { opacity: .9 }

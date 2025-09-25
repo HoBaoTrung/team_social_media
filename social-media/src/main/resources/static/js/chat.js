@@ -191,7 +191,7 @@ class ChatManager {
             <div class="mention-suggestions" id="mentions-${chatId}" style="display:none"></div>
             <div class="chat-input">
                 <div class="input-wrap">
-                    <textarea id="input-${chatId}" rows="1" placeholder="Nhập tin nhắn... ${type === 'group' ? '(Dùng @ để tag)' : ''}"
+                    <textarea id="input-${chatId}" rows="1" placeholder="Nhập tin nhắn..."
                         data-chat-type="${type}"
                         oninput="chatManager.handleInput(event, '${chatId}')"
                         onkeydown="chatManager.handleKeyDown(event, '${chatId}')"
