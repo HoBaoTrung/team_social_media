@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.repository;
+package com.codegym.socialmedia.repository.user;
 
 import com.codegym.socialmedia.model.account.User;
 import org.springframework.data.domain.Page;

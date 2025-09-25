@@ -1,13 +1,16 @@
 package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.component.CloudinaryService;
-import com.codegym.socialmedia.dto.UserDTO;
-import com.codegym.socialmedia.dto.UserRegistrationDto;
+import com.codegym.socialmedia.dto.user.UserDTO;
+import com.codegym.socialmedia.dto.user.UserRegistrationDto;
 import com.codegym.socialmedia.model.account.NotificationSettings;
 import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.account.UserPrivacySettings;
 import com.codegym.socialmedia.repository.*;
+import com.codegym.socialmedia.repository.user.IUserRepository;
+import com.codegym.socialmedia.repository.user.RoleRepository;
+import com.codegym.socialmedia.repository.user.UserPrivacySettingsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

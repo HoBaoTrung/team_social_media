@@ -3,7 +3,7 @@ package com.codegym.socialmedia.service.post;
 import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.*;
-import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.repository.comment.LikeCommentRepository;
 import com.codegym.socialmedia.repository.comment.MentionRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;

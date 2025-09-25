@@ -1,7 +1,7 @@
 package com.codegym.socialmedia.config;
 
 import com.codegym.socialmedia.model.account.Role;
-import com.codegym.socialmedia.repository.RoleRepository;
+import com.codegym.socialmedia.repository.user.RoleRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

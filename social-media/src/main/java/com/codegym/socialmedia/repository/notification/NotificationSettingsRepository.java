@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.repository;
+package com.codegym.socialmedia.repository.notification;
 
 import com.codegym.socialmedia.model.account.NotificationSettings;
 import org.springframework.data.jpa.repository.JpaRepository;

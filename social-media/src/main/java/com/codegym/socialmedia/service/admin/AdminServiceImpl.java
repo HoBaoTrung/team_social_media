@@ -1,22 +1,19 @@
 package com.codegym.socialmedia.service.admin;
 
-import com.codegym.socialmedia.dto.UserDTO;
+import com.codegym.socialmedia.dto.user.UserDTO;
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.repository.TrackingRepository;
 import com.codegym.socialmedia.service.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Service

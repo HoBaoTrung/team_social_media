@@ -3,7 +3,7 @@ package com.codegym.socialmedia.service.notification;
 import com.codegym.socialmedia.component.NotificationMapper;
 import com.codegym.socialmedia.dto.NotificationDTO;
 import com.codegym.socialmedia.model.social_action.Notification;
-import com.codegym.socialmedia.repository.NotificationRepository;
+import com.codegym.socialmedia.repository.notification.NotificationRepository;
 import com.codegym.socialmedia.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,8 +15,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 @Service

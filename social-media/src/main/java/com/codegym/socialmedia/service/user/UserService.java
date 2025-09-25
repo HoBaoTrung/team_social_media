@@ -1,7 +1,7 @@
 package com.codegym.socialmedia.service.user;
 
-import com.codegym.socialmedia.dto.UserDTO;
-import com.codegym.socialmedia.dto.UserRegistrationDto;
+import com.codegym.socialmedia.dto.user.UserDTO;
+import com.codegym.socialmedia.dto.user.UserRegistrationDto;
 import com.codegym.socialmedia.model.account.User;
 import org.springframework.web.multipart.MultipartFile;
 

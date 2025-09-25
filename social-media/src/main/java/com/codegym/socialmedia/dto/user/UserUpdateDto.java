@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.dto;
+package com.codegym.socialmedia.dto.user;
 
 import com.codegym.socialmedia.annotation.MinAge;
 import com.codegym.socialmedia.annotation.Unique;

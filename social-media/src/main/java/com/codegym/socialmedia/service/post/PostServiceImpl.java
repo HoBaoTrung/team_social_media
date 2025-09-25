@@ -7,7 +7,7 @@ import com.codegym.socialmedia.dto.post.PostDisplayDto;
 import com.codegym.socialmedia.dto.post.PostUpdateDto;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.*;
-import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;
 import com.codegym.socialmedia.repository.post.PostLikeRepository;
 import com.codegym.socialmedia.repository.post.PostRepository;

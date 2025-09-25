@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.repository;
+package com.codegym.socialmedia.repository.conversation;
 
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.conversation.Conversation;

@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.repository;
+package com.codegym.socialmedia.repository.conversation;
 
 import com.codegym.socialmedia.model.conversation.Conversation;
 import org.springframework.data.domain.Page;

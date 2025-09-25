@@ -2,14 +2,12 @@ package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.ErrAccountException;
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.repository.user.IUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.Collections;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {

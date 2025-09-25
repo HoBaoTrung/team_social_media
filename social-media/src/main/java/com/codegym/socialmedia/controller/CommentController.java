@@ -3,25 +3,19 @@ package com.codegym.socialmedia.controller;
 import com.codegym.socialmedia.dto.comment.CommentRequest;
 import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.model.social_action.CommentMention;
 import com.codegym.socialmedia.model.social_action.PostComment;
-import com.codegym.socialmedia.repository.IUserRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
-import com.codegym.socialmedia.service.notification.PostMessage;
 import com.codegym.socialmedia.service.post.PostCommentService;
 import com.codegym.socialmedia.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 
 @RestController

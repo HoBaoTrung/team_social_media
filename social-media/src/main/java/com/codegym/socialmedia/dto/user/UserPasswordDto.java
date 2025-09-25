@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.dto;
+package com.codegym.socialmedia.dto.user;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

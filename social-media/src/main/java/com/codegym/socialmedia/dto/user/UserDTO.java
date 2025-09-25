@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.dto;
+package com.codegym.socialmedia.dto.user;
 
 import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.model.account.User;

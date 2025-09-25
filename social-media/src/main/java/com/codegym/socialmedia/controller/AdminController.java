@@ -1,7 +1,6 @@
 package com.codegym.socialmedia.controller;
 
-import com.codegym.socialmedia.dto.UserDTO;
-import com.codegym.socialmedia.model.account.User;
+import com.codegym.socialmedia.dto.user.UserDTO;
 import com.codegym.socialmedia.service.admin.AdminService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @Controller

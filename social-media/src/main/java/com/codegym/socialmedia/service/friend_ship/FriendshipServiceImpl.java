@@ -4,12 +4,11 @@ import com.codegym.socialmedia.dto.chat.UserSearchDto;
 import com.codegym.socialmedia.dto.friend.FriendDto;
 import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.model.account.UserPrivacySettings;
 import com.codegym.socialmedia.model.social_action.Friendship;
 import com.codegym.socialmedia.model.social_action.FriendshipId;
 import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.FriendshipRepository;
-import com.codegym.socialmedia.repository.IUserRepository;
+import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.service.chat.ChatService;
 import com.codegym.socialmedia.service.notification.NotificationService;
 import com.codegym.socialmedia.service.user.UserService;
@@ -21,7 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
