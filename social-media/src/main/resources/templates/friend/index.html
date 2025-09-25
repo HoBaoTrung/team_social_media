@@ -8,14 +8,14 @@
     <th:block th:replace="~{fragments/common/commonHead :: commonHead}"></th:block>
     <link rel="stylesheet" th:href="@{/css/friend_card.css}">
     <style>
+        .friend-action button{
+            margin-bottom: 5px;
+        }
         @media (max-width: 767.98px) {
             .custom-responsive {
                 margin-top: 3rem !important;
                 z-index: 1;
                 position: absolute;
-            }
-            #acceptedBtnGroup {
-                display: none !important;
             }
         }
     </style>

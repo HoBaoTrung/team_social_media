@@ -9,9 +9,13 @@
                 data-bs-toggle="dropdown" aria-expanded="false">
             <i class="fa-solid fa-user-check"></i> Bạn bè
         </button>
-        <ul class="dropdown-menu" th:aria-labelledby="'friendDropdownBtn-' + ${username}" >
+        <ul class="dropdown-menu"
+            th:aria-labelledby="'friendDropdownBtn-' + ${username}"
+            style="width: 100%; padding: 5px 5px 0 5px;">
             <li>
-                <button class="btn btn-danger deleteFriendBtn"  th:data-username="${username}">
+                <button type="button"
+                        class="btn btn-danger deleteFriendBtn"
+                        th:data-username="${username}">
                     <i class="fa-solid fa-user-xmark"></i> Hủy kết bạn
                 </button>
             </li>
@@ -25,7 +29,7 @@
             </button>
         </div>
         <div th:if="${isReceiver}">
-            <button class="btn btn-success acceptFriendBtn mb-3"  th:data-username="${username}">
+            <button class="btn btn-success acceptFriendBtn "  th:data-username="${username}">
                 <i class="fa-solid fa-user-check"></i> Chấp nhận
             </button>
             <button class="btn btn-danger  reflectFriendBtn"  th:classappend="${addMargin} ? 'mt-3' : ''" th:data-username="${username}">
