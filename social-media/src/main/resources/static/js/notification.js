@@ -95,7 +95,7 @@ function buildLink(n) {
 }
 
 function buildNotificationText(n) {
-    const username = n.sender?.username || 'Người dùng';
+    const username = n.sender?.fullName || 'Người dùng';
     switch ((n.notificationType || '').toUpperCase()) {
         case 'LIKE_POST':
             return `${username} đã thích bài viết của bạn`;
@@ -117,23 +117,29 @@ function buildNotificationText(n) {
 
 function buildNotificationElement(n) {
     const a = document.createElement('a');
-    a.className = 'dropdown-item d-flex align-items-center';
+    a.className = 'dropdown-item d-flex align-items-start'; // đổi align-items-start để dot nằm trên
     a.setAttribute('href', buildLink(n));
     if (n.id) a.dataset.id = String(n.id);
+
     const avatarUrl = n.sender?.avatarUrl || '/images/default-avatar.png';
 
     a.innerHTML = `
-    <img src="${escapeHtml(avatarUrl)}" class="rounded-circle me-2" width="40" height="40" onerror="this.src='/images/default-avatar.png'">
-    <div class="flex-grow-1">
-        <div class="small text-dark">${escapeHtml(buildNotificationText(n))}</div>
-        <div class="text-muted small">${formatTimeAgo(n.createdAt)}</div>
-    </div>
+        <img src="${escapeHtml(avatarUrl)}" 
+             class="rounded-circle me-2" 
+             width="40" height="40" 
+             onerror="this.src='/images/default-avatar.png'">
+        <div class="flex-grow-1">
+            <div class="small text-dark">${escapeHtml(buildNotificationText(n))}</div>
+            <div class="text-muted small">${formatTimeAgo(n.createdAt)}</div>
+        </div>
+        ${!n.isRead ? '<span class="unread-dot ms-2"></span>' : ''}
     `;
 
     const li = document.createElement('li');
     li.appendChild(a);
     return li;
 }
+
 
 function escapeHtml(unsafe) {
     if (unsafe == null) return '';

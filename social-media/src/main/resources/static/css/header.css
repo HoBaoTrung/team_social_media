@@ -477,3 +477,14 @@
         z-index: 1060 !important; /* Cao hơn dropdown nếu cần */
     }
 }
+
+.unread-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #1877f2; /* xanh Facebook */
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    position: absolute;
+    right: 5%;
+}
