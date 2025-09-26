@@ -563,39 +563,6 @@ class PostManager {
         });
     }
 
-    async refreshPostStats(postId) {
-        try {
-            const response = await fetch(`/posts/api/${postId}`);
-            const post = await response.json();
-
-            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
-            const statsElement = postElement.querySelector('.post-stats');
-
-            if (post.likesCount > 0 || post.commentsCount > 0) {
-                statsElement.innerHTML = `
-                    <div class="post-likes">
-                        ${post.likesCount > 0 ? `
-                            <div class="post-likes-icon">
-                                <i class="fas fa-heart"></i>
-                            </div>
-                            <span>${post.likesCount} lượt thích</span>
-                        ` : ''}
-                    </div>
-                    <div>
-                        ${post.commentsCount > 0 ? `
-                            <span class="post-comments-count">${post.commentsCount} bình luận</span>
-                        ` : ''}
-                    </div>
-                `;
-                statsElement.style.display = 'flex';
-            } else {
-                statsElement.style.display = 'none';
-            }
-        } catch (error) {
-            console.error('Error refreshing post stats:', error);
-        }
-    }
-
     async editPost(postId) {
         try {
 

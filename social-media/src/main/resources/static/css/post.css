@@ -438,6 +438,11 @@
     font-size: 14px;
     resize: none;
     background-color: #f0f2f5;
+    height: auto;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .comment-input:focus {
