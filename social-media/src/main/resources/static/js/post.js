@@ -762,7 +762,6 @@ class PostManager {
 // ===== Toggle + bind scroll =====
     async toggleComments(postId) {
         const section = document.getElementById(`comments-${postId}`);
-        // Đừng dùng element.style.display; dùng computedStyle để bắt đúng lần đầu
         const isVisible = window.getComputedStyle(section).display !== 'none';
 
         if (isVisible) {
@@ -1362,52 +1361,93 @@ class PostManager {
             $(`#comment-${parentCommentId}`).after($replyContainer);
         }
 
-        // Nếu đã có box thì toggle ẩn/hiện
         const existingBox = $replyContainer.find(".reply-box");
         if (existingBox.length > 0) {
-            existingBox.remove(); // bấm lần nữa thì tắt
+            existingBox.remove();
             return;
         }
-
-        // Nếu chưa có thì thêm box
         const $replyBox = $(`
-<div class="comment-form reply-box">
-                        <img src="${this.getCurrentUserAvatar()}" alt="Avatar" class="comment-avatar">
-                        <div class="comment-input-container" style="position: relative">
-                            <div contenteditable="true" class="comment-input" data-placeholder="Viết bình luận..." 
-                                 onkeypress="postManager.handleCommentKeyPress(event, ${postId}, 'reply-${parentCommentId}')"
-                                 onkeydown="postManager.handleMentionKeyDown(event, ${postId}, 'reply-${parentCommentId}')"
-                                 oninput="postManager.showMentionSuggestions(${postId}, this, 'reply-${parentCommentId}')">
-                            </div>
-                            <ul id="mentions-dropdown-reply-${parentCommentId}"" class="mentions-dropdown"></ul>
-                             <button class="comment-submit" onclick="postManager.submitReply(${postId}, ${parentCommentId}, this)">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                         </div>
-                    </div>
+            <div class="comment-form reply-box">
+              <img src="${this.getCurrentUserAvatar()}" alt="Avatar" class="comment-avatar">
+              <div class="comment-input-container" style="position: relative">
+                <div contenteditable="true" class="comment-input" data-placeholder="Viết bình luận..."
+                     onkeypress="postManager.handleCommentKeyPress(event, ${postId}, 'reply-${parentCommentId}')"
+                     onkeydown="postManager.handleMentionKeyDown(event, ${postId}, 'reply-${parentCommentId}')"
+                     oninput="postManager.showMentionSuggestions(${postId}, this, 'reply-${parentCommentId}')">
+                </div>
+                <ul id="mentions-dropdown-reply-${parentCommentId}" class="mentions-dropdown"></ul>
+                <button class="comment-submit" onclick="postManager.submitReply(${postId}, ${parentCommentId}, this)">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+                `);
 
-    `);
         $replyContainer.prepend($replyBox);
     }
 
+    // submitReply (robust, xử lý jQuery/DOM, thay NBSP, fallback)
     async submitReply(postId, parentCommentId, btn, key = `reply-${parentCommentId}`) {
-        const input = btn.previousElementSibling.previousElementSibling; // the div
-        const content = input.innerText.trim();
-        if (!content) return;
-
-        btn.disabled = true;
-        input.contentEditable = 'false';
-
         try {
-            const mentionedUserIds = [...new Set(Array.from(input.querySelectorAll('.mention')).map(span => parseInt(span.dataset.userId)))];
+            // nếu btn là jQuery object => lấy phần tử DOM
+            if (btn && btn.jquery) btn = btn[0];
+
+            // lấy reply-box một cách an toàn (không phụ thuộc vào previousElementSibling chain)
+            const replyBox = (btn && typeof btn.closest === 'function') ? btn.closest('.reply-box') : null;
+            let input = replyBox ? replyBox.querySelector('.comment-input') : null;
+
+            // fallback: cố gắng dò bằng previousElementSibling như trước (nếu cần)
+            if (!input && btn) {
+                const prev1 = btn.previousElementSibling;
+                const prev2 = prev1 ? prev1.previousElementSibling : null;
+                if (prev2 && prev2.classList && prev2.classList.contains('comment-input')) {
+                    input = prev2;
+                }
+            }
+
+            if (!input) {
+                console.error('Không tìm thấy .comment-input cho reply (submitReply).');
+                this.showNotification("Lỗi: không tìm thấy ô nhập.", "error");
+                return;
+            }
+
+            // disable button + khóa input
+            btn.disabled = true;
+            input.contentEditable = 'false';
+
+            // lấy text an toàn: replace NBSP rồi trim
+            const rawText = (input.textContent ?? '').replace(/\u00A0/g, ' ').trim();
+            if (!rawText) {
+                // nếu rỗng sau khi trim thì bỏ qua (bật lại trạng thái trước khi return)
+                btn.disabled = false;
+                input.contentEditable = 'true';
+                return;
+            }
+
+            // lấy mention ids (unique)
+            const mentionedUserIds = [...new Set(
+                Array.from(input.querySelectorAll('.mention'))
+                    .map(span => Number(span.dataset.userId))
+                    .filter(id => !Number.isNaN(id) && id > 0)
+            )];
+
+            // CHÚ Ý: nếu bạn muốn gửi nội dung bao gồm markup (ví dụ giữ span.mention), gửi input.innerHTML
+            // Nếu backend chỉ cần text plain, gửi rawText.
+            const payload = {
+                postId,
+                content: rawText,
+                // content: input.innerHTML, // hoặc rawText tùy backend
+                mentionedUserIds
+            };
+
             const res = await fetch(`/api/comments/${parentCommentId}/reply`, {
                 method: "POST",
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({postId, content, mentionedUserIds})
+                body: JSON.stringify(payload)
             });
 
             if (!res.ok) {
-                const result = await res.json();
+                const result = await res.json().catch(() => ({}));
                 throw new Error(result.message || 'Failed to add reply');
             }
 
@@ -1419,14 +1459,17 @@ class PostManager {
                     $(`#comment-${parentCommentId}`).after($repliesGroup);
                 }
                 this.appendCommentToUI(postId, data.reply, 'prepend', parentCommentId);
-                input.closest(".reply-box").remove(); // Xóa ô nhập sau khi gửi
+                // xóa ô nhập
+                input.closest(".reply-box")?.remove();
                 this.showNotification("Phản hồi đã được gửi!", "success");
             }
+
         } catch (e) {
             console.error(e);
             this.showNotification("Có lỗi xảy ra khi gửi phản hồi: " + e.message, "error");
         } finally {
-            btn.disabled = false;
+            // chỉ enable lại button ở đây (input có thể đã bị remove)
+            try { btn.disabled = false; } catch (e) {}
         }
     }
 
