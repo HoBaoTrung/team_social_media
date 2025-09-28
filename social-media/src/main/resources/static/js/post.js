@@ -1373,8 +1373,7 @@ class PostManager {
                 <div contenteditable="true" class="comment-input" data-placeholder="Viết bình luận..."
                      onkeypress="postManager.handleCommentKeyPress(event, ${postId}, 'reply-${parentCommentId}')"
                      onkeydown="postManager.handleMentionKeyDown(event, ${postId}, 'reply-${parentCommentId}')"
-                     oninput="postManager.showMentionSuggestions(${postId}, this, 'reply-${parentCommentId}')">
-                </div>
+                     oninput="postManager.showMentionSuggestions(${postId}, this, 'reply-${parentCommentId}')"></div>
                 <ul id="mentions-dropdown-reply-${parentCommentId}" class="mentions-dropdown"></ul>
                 <button class="comment-submit" onclick="postManager.submitReply(${postId}, ${parentCommentId}, this)">
                   <i class="fas fa-paper-plane"></i>
@@ -1431,12 +1430,9 @@ class PostManager {
                     .filter(id => !Number.isNaN(id) && id > 0)
             )];
 
-            // CHÚ Ý: nếu bạn muốn gửi nội dung bao gồm markup (ví dụ giữ span.mention), gửi input.innerHTML
-            // Nếu backend chỉ cần text plain, gửi rawText.
             const payload = {
                 postId,
                 content: rawText,
-                // content: input.innerHTML, // hoặc rawText tùy backend
                 mentionedUserIds
             };
 
