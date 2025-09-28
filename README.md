@@ -85,7 +85,23 @@ It also provides an admin dashboard to manage users and monitor system activitie
 48. Mention users in chat (@tag)
 49. Send files in chat
 50. Video call with friends (WebRTC/WebSocket)
+---
+## 🖼️ Screenshots
 
+### 🔑 Login/Resgister Page
+![login.png](Screenshots/login.png)
+![resgister.jpg](Screenshots/resgister.jpg)
+### 🏠 Home / News Feed
+![news-feed.jpg](Screenshots/news-feed.jpg)
+### 👍 Like & 💬 Comment
+![like&&comment&&reply.jpg](Screenshots/like%26%26comment%26%26reply.jpg)
+### 👤 Profile Page
+![profile.jpg](Screenshots/profile.jpg)
+![profile2.jpg](Screenshots/profile2.jpg)
+### 💬 Chat Feature
+![chat.jpg](Screenshots/chat.jpg)
+### 🔧 Admin Dashboard
+![admin_dashboard.png](Screenshots/admin_dashboard.png)
 ---
 
 ## 📂 Project Structure
@@ -145,17 +161,18 @@ It also provides an admin dashboard to manage users and monitor system activitie
 Use the following command to clone the repository:
 
 ```bash
-git clone https://github.com/HoBaoTrung/team_2_social_media.git
+git clone https://github.com/HoBaoTrung/team_social_media.git
 ```
 ### Create and Configure the application-dev-secret.properties File
  1. Copy the provided application-dev-secret.properties template.
  2. Update the file with your specific settings, such as database credentials and API keys.
 
-### Run the ProjectYou can run the project using one of the following methods:
-Use your preferred IDE (e.g., IntelliJ, Eclipse).
+### Run the Project
+You can run the project using one of the following methods:
+1. Checkout to Develop Branch
+2. Use your preferred IDE (e.g., IntelliJ, Eclipse).
 Alternatively, run the following command from the terminal
-
-### Execute the SQL Example Data
+3. Execute the SQL Example Data
 
 ## Sample Data Description
 

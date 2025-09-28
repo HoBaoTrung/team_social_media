@@ -1,13 +1,4 @@
 use social_media;
-ALTER TABLE messages 
-MODIFY content VARCHAR(1000) 
-CHARACTER SET utf8mb4 
-COLLATE utf8mb4_unicode_ci;
-
--- Chèn dữ liệu mẫu vào bảng admin_role
-INSERT INTO roles (name) VALUES
-('ROLE_ADMIN'),
-('ROLE_USER');
 
 INSERT INTO users (
     username, email, password_hash, first_name, last_name,
@@ -29,7 +20,7 @@ VALUES
 
 ('alex_taylor', 'alex@example.com', '$2a$10$oNtne4qiFdVyKsFC.S.xx.Pl9Zxhl65krYilyBrvzk4HeHLE1ExkK', 'Alex', 'Taylor',
  NULL, 'Love coding and coffee.', '1995-12-03', 'OTHER', NULL,
- 'FACEBOOK', false, false, 'PENDING', '2025-08-01');
+ 'FACEBOOK', true, true, 'ACTIVE', '2025-08-01');
  
  
  INSERT INTO users (
@@ -182,19 +173,13 @@ INSERT INTO posts (user_id, content, image_urls, privacy_level,`privacy_comment_
 (1, 'Cảm ơn mọi người đã chúc mừng sinh nhật tôi!', '["https://res.cloudinary.com/dryyvmkwo/image/upload/v1748588728/samples/dessert-on-a-plate.jpg"]', 'FRIENDS',  'PUBLIC', '2023-10-03 09:20:00',false);
 
 
-INSERT INTO post_comments (post_id, user_id, content, is_deleted, created_at, updated_at)
-VALUES (2, 1, 'Great post! Really enjoyed reading this.', false, '2023-05-10 09:15:22', '2023-05-10 09:15:22'),
- (2, 2, 'Could you elaborate more on the second point?', false, '2023-05-10 11:30:45', '2023-05-10 11:30:45'),
- (2, 3, 'Good', false, '2023-05-11 14:20:10', '2023-05-11 14:25:33'),
-(2, 1, 'Thanks for sharing this information!', false, '2023-05-12 08:45:12', '2023-05-12 08:45:12'),
- (2, 4, 'I disagree with some points but appreciate the effort.', false, '2023-05-12 16:30:00', '2023-05-12 16:30:00');
- 
-INSERT INTO notifications (id, sender_id, receiver_id, notification_type, reference_id, created_at, is_read, reference_type) VALUES
-(1, 2, 1, 'LIKE_POST',      1, '2025-08-18 09:10:00', false, 'POST'), -- referenceId=postId
-(2, 3, 1, 'COMMENT_POST',   1, '2025-08-18 09:12:00', false, 'COMMENT'), -- comment vào postId=101
-(3, 4, 1, 'FRIEND_REQUEST', 2,  '2025-08-18 09:15:00', false, 'FRIENDSHIP'), -- referenceId=friendshipId
-(4, 5, 1, 'LIKE_COMMENT',   2, '2025-08-18 09:20:00', true, 'COMMENT'),  -- referenceId=commentId
-(5, 6, 1, 'REPLY_COMMENT',  3, '2025-08-18 09:25:00', false, 'COMMENT');
+-- INSERT INTO post_comments (post_id, user_id, content, is_deleted, created_at, updated_at)
+-- VALUES (2, 1, 'Great post! Really enjoyed reading this.', false, '2023-05-10 09:15:22', '2023-05-10 09:15:22'),
+-- (2, 2, 'Could you elaborate more on the second point?', false, '2023-05-10 11:30:45', '2023-05-10 11:30:45'),
+-- (2, 3, 'Good', false, '2023-05-11 14:20:10', '2023-05-11 14:25:33'),
+-- (2, 1, 'Thanks for sharing this information!', false, '2023-05-12 08:45:12', '2023-05-12 08:45:12'),
+-- (2, 4, 'I disagree with some points but appreciate the effort.', false, '2023-05-12 16:30:00', '2023-05-12 16:30:00');
+
 
 
 -- 1. Cuộc trò chuyện 1-1 (PRIVATE)
@@ -210,7 +195,7 @@ VALUES
 
 -- 2. Cuộc trò chuyện nhóm (GROUP)
 INSERT INTO conversations (conversation_name, conversation_type, created_by, group_avatar, created_at, updated_at, is_active, last_message_at)
-VALUES ('Nhóm Java Spring', 'GROUP', 1, 'group1.png', NOW(), NOW(), TRUE, NOW());
+VALUES ('Nhóm Java Spring', 'GROUP', 1, 'https://res.cloudinary.com/dryyvmkwo/image/upload/v1748588726/samples/balloons.jpg', NOW(), NOW(), TRUE, NOW());
 
 -- Giả sử ID sinh ra tự động = 2
 INSERT INTO conversation_participants (conversation_id, user_id, joined_at, role, is_muted, is_active, nickname)
@@ -223,7 +208,7 @@ VALUES
 
 -- 3. Cuộc trò chuyện nhóm khác
 INSERT INTO conversations (conversation_name, conversation_type, created_by, group_avatar, created_at, updated_at, is_active, last_message_at)
-VALUES ('Dự án Web Chat', 'GROUP', 2, 'group2.png', NOW(), NOW(), TRUE, NOW());
+VALUES ('Dự án Web Chat', 'GROUP', 2, 'https://res.cloudinary.com/dryyvmkwo/image/upload/v1748588721/samples/ecommerce/accessories-bag.jpg', NOW(), NOW(), TRUE, NOW());
 
 -- Giả sử ID sinh ra tự động = 3
 INSERT INTO conversation_participants (conversation_id, user_id, joined_at, role, is_muted, is_active, nickname)
