@@ -40,9 +40,6 @@ public class PostController {
 
     @Autowired
     private PostCommentService commentService;
-    // LOẠI BỎ: @Autowired private PostRepository postRepository;
-    // LOẠI BỎ: (tạm thời vì chưa implement)
-
     // ================== WEB PAGES ==================
 
     @GetMapping("/user/{username}")
