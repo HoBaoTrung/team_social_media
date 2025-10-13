@@ -1,6 +1,8 @@
 package com.codegym.socialmedia.jwt;
 
+import com.codegym.socialmedia.model.account.UserSession;
 import com.codegym.socialmedia.service.user.CustomUserDetailsService;
+import com.codegym.socialmedia.service.user.UserSessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -25,39 +28,37 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
+    @Autowired
+    private UserSessionService userSessionService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String jwtToken = null;
+        String jwtToken = extractJwtFromRequest(request);
         String username = null;
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("jwt_token".equals(cookie.getName())) {
-                    jwtToken = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        if (jwtToken == null) {
-            final String authHeader = request.getHeader("Authorization");
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                jwtToken = authHeader.substring(7);
-            }
-        }
 
         if (jwtToken != null) {
             try {
+                // ✅ Kiểm tra session trong DB
+                boolean valid = userSessionService.validateSession(jwtToken);
+                if (!valid) {
+                    response.sendRedirect("/login?expired");
+                    return;
+                }
+
+                // ✅ Giải mã JWT
                 username = jwtUtil.extractUsername(jwtToken);
+
             } catch (Exception e) {
-                System.err.println("JWT parse error: " + e.getMessage());
+                response.sendRedirect("/login?error=invalid");
+                return;
             }
         }
 
+        // ✅ Xác thực người dùng vào SecurityContext
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
 
@@ -65,12 +66,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                //  Gán authentication vào SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String extractJwtFromRequest(HttpServletRequest request) {
+        String jwtToken = null;
+
+        // Lấy từ cookie
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("jwt_token".equals(cookie.getName())) {
+                    jwtToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        // Lấy từ header
+        if (jwtToken == null) {
+            final String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwtToken = authHeader.substring(7);
+            }
+        }
+
+        return jwtToken;
     }
 }

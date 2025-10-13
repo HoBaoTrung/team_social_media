@@ -1,0 +1,60 @@
+package com.codegym.socialmedia.component;
+
+import com.codegym.socialmedia.model.account.User;
+import com.codegym.socialmedia.repository.user.UserSessionRepository;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.stereotype.Component;
+@Component
+public class CustomLogoutHandler implements LogoutHandler {
+
+    @Autowired
+    private UserSessionRepository userSessionRepository;
+
+    @Override
+    public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+        String refreshToken = extractCookieValue(request, "refresh_token");
+
+        if (refreshToken != null) {
+            // Tìm và xóa session theo refresh_token
+            userSessionRepository.findBySessionToken(refreshToken)
+                    .ifPresent(userSessionRepository::delete);
+        }
+
+        // Xóa cookie phía client
+        clearCookie(response, "jwt_token");
+        clearCookie(response, "refresh_token");
+    }
+
+    // Logout thủ công (dùng trong controller)
+    public void logout(User user, HttpServletResponse response) {
+        userSessionRepository.deleteByUser(user);
+        clearCookie(response, "jwt_token");
+        clearCookie(response, "refresh_token");
+    }
+
+    // ======= Helper methods =======
+
+    private String extractCookieValue(HttpServletRequest request, String name) {
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if (name.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private void clearCookie(HttpServletResponse response, String name) {
+        Cookie cookie = new Cookie(name, null);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        cookie.setHttpOnly(true);
+        response.addCookie(cookie);
+    }
+}

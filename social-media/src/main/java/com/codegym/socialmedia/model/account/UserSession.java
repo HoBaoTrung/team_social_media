@@ -22,6 +22,9 @@ public class UserSession {
     @Column(length = 255)
     private String sessionToken;
 
+    @Column(length = 255, nullable = false, unique = true)
+    private String refreshToken;
+
     @Column(length = 45)
     private String ipAddress;
 

@@ -130,7 +130,7 @@ public class UserController {
 
     @GetMapping("/")
     public String home() {
-        return "redirect:/login";
+        return "redirect:/news-feed";
     }
 
     @GetMapping("/login")
