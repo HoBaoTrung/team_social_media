@@ -23,9 +23,12 @@ public class UserSessionService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    /**
+     * ✅ Tạo mới session khi người dùng đăng nhập
+     */
     public void createSession(User user, HttpServletRequest request, HttpServletResponse response) {
         String accessToken = jwtUtil.generateToken(user.getUsername()); // 10h
-        String refreshToken = UUID.randomUUID().toString(); // 30 ngày
+        String refreshToken = UUID.randomUUID().toString();             // 30 ngày
 
         UserSession session = new UserSession();
         session.setUser(user);
@@ -36,45 +39,106 @@ public class UserSessionService {
         session.setDeviceInfo(detectDevice(request.getHeader("User-Agent")));
         session.setLoginMethod(UserSession.LoginMethod.WEB);
         session.setCreatedAt(LocalDateTime.now());
-        session.setExpiresAt(LocalDateTime.now().plusDays(30));
+        session.setExpiresAt(LocalDateTime.now().plusDays(30)); // refresh token hết hạn
         session.setLastActivity(LocalDateTime.now());
         session.setActive(true);
+
         userSessionRepository.save(session);
 
-        // Cookie Access Token
-        Cookie jwtCookie = new Cookie("jwt_token", accessToken);
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(10 * 60 * 60); // 10h
-
-        // Cookie Refresh Token
-        Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(30 * 24 * 60 * 60); // 30 ngày
-
-        response.addCookie(jwtCookie);
-        response.addCookie(refreshCookie);
+        // Cookie Access Token (10h)
+        addCookie(response, "jwt_token", accessToken, 10 * 60 * 60);
+        // Cookie Refresh Token (30 ngày)
+        addCookie(response, "refresh_token", refreshToken, 30 * 24 * 60 * 60);
     }
 
-
+    /**
+     * ✅ Kiểm tra session còn hiệu lực (token hợp lệ & active)
+     */
     public boolean validateSession(String token) {
         Optional<UserSession> sessionOpt = userSessionRepository.findBySessionTokenAndIsActiveTrue(token);
         if (sessionOpt.isEmpty()) return false;
 
         UserSession session = sessionOpt.get();
         if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
-            userSessionRepository.delete(session);
+            session.setActive(false);
+            userSessionRepository.save(session);
             return false;
         }
         return true;
     }
 
+    /**
+     * ✅ Làm mới accessToken khi accessToken hết hạn nhưng refreshToken còn hạn
+     */
+    public String refreshAccessTokenIfNeeded(String refreshToken, HttpServletResponse response) {
+        Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshTokenAndIsActiveTrue(refreshToken);
+        if (sessionOpt.isEmpty()) return null;
+
+        UserSession session = sessionOpt.get();
+
+        // RefreshToken hết hạn?
+        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
+            logoutSession(refreshToken, response);
+            return null;
+        }
+
+        // Sinh access token mới
+        String username = session.getUser().getUsername();
+        String newAccessToken = jwtUtil.generateToken(username);
+
+        session.setSessionToken(newAccessToken);
+        session.setLastActivity(LocalDateTime.now());
+        userSessionRepository.save(session);
+
+        // Cập nhật cookie
+        addCookie(response, "jwt_token", newAccessToken, 10 * 60 * 60);
+
+        return newAccessToken;
+    }
+
+    /**
+     * ✅ Cập nhật thời điểm hoạt động cuối khi người dùng truy cập
+     */
+    public void updateLastActivity(String token) {
+        userSessionRepository.findBySessionTokenAndIsActiveTrue(token).ifPresent(session -> {
+            session.setLastActivity(LocalDateTime.now());
+            userSessionRepository.save(session);
+        });
+    }
+
+    /**
+     * ✅ Đăng xuất & xóa cookie
+     */
+    public void logoutSession(String refreshToken, HttpServletResponse response) {
+        userSessionRepository.findByRefreshToken(refreshToken).ifPresent(session -> {
+            userSessionRepository.delete(session);
+        });
+
+        deleteCookie(response, "jwt_token");
+        deleteCookie(response, "refresh_token");
+    }
+
+    /* ------------------ Helper methods ------------------ */
+
+    private void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(maxAge);
+        response.addCookie(cookie);
+    }
+
+    private void deleteCookie(HttpServletResponse response, String name) {
+        Cookie cookie = new Cookie(name, "");
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+    }
 
     private String detectDevice(String userAgent) {
         if (userAgent == null) return "Unknown";
-        if (userAgent.contains("Mobile")) return "Mobile";
-        if (userAgent.contains("Tablet")) return "Tablet";
+        if (userAgent.toLowerCase().contains("mobile")) return "Mobile";
+        if (userAgent.toLowerCase().contains("tablet")) return "Tablet";
         return "Web";
     }
 }

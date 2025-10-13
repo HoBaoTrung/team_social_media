@@ -21,18 +21,11 @@ public class CustomLogoutHandler implements LogoutHandler {
 
         if (refreshToken != null) {
             // Tìm và xóa session theo refresh_token
-            userSessionRepository.findBySessionToken(refreshToken)
+            userSessionRepository.findByRefreshToken(refreshToken)
                     .ifPresent(userSessionRepository::delete);
         }
 
         // Xóa cookie phía client
-        clearCookie(response, "jwt_token");
-        clearCookie(response, "refresh_token");
-    }
-
-    // Logout thủ công (dùng trong controller)
-    public void logout(User user, HttpServletResponse response) {
-        userSessionRepository.deleteByUser(user);
         clearCookie(response, "jwt_token");
         clearCookie(response, "refresh_token");
     }

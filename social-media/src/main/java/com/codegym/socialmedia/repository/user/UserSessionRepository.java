@@ -12,11 +12,9 @@ public interface UserSessionRepository extends JpaRepository<UserSession, Long> 
     // Tìm theo token
     Optional<UserSession> findBySessionToken(String sessionToken);
 
-    // Tìm session đang hoạt động của người dùng
-    List<UserSession> findByUserAndIsActiveTrue(User user);
-
-    // Tìm session hợp lệ (đang hoạt động và chưa hết hạn)
     Optional<UserSession> findBySessionTokenAndIsActiveTrue(String sessionToken);
+    Optional<UserSession> findByRefreshTokenAndIsActiveTrue(String refreshToken);
+    Optional<UserSession> findByRefreshToken(String refreshToken);
 
     // Xoá session hết hạn
     void deleteByExpiresAtBefore(java.time.LocalDateTime time);
