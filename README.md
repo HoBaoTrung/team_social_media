@@ -172,7 +172,11 @@ You can run the project using one of the following methods:
 1. Checkout to Develop Branch
 2. Use your preferred IDE (e.g., IntelliJ, Eclipse).
 Alternatively, run the following command from the terminal
-3. Execute the SQL Example Data
+3. Pull Redis from Docker Hub and run Docker container
+```bash 
+docker run -d --name redis-server -p 6379:6379 redis
+```
+4. Execute the SQL Example Data
 
 ## Sample Data Description
 
