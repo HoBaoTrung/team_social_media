@@ -5,18 +5,15 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 import java.util.function.Function;
-
 
 @Component
 @PropertySource("classpath:secret.properties")
@@ -57,6 +54,7 @@ public class JwtUtil {
 
     public String generateToken(String username) {
         return Jwts.builder()
+                .setId(UUID.randomUUID().toString())
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10h
@@ -71,5 +69,11 @@ public class JwtUtil {
         } catch (JwtException e) {
             return false;
         }
+    }
+
+    public long getRemainingTime(String token) {
+        Date expiration = extractExpiration(token);
+        long diffMillis = expiration.getTime() - System.currentTimeMillis();
+        return Math.max(diffMillis / 1000, 0);
     }
 }

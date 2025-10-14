@@ -1,7 +1,8 @@
 package com.codegym.socialmedia.component;
 
-import com.codegym.socialmedia.model.account.User;
+import com.codegym.socialmedia.jwt.JwtUtil;
 import com.codegym.socialmedia.repository.user.UserSessionRepository;
+import com.codegym.socialmedia.service.user.TokenBlacklistService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,16 +16,26 @@ public class CustomLogoutHandler implements LogoutHandler {
     @Autowired
     private UserSessionRepository userSessionRepository;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
         String refreshToken = extractCookieValue(request, "refresh_token");
-
+        String jwtToken = extractCookieValue(request, "jwt_token");
         if (refreshToken != null) {
             // Tìm và xóa session theo refresh_token
             userSessionRepository.findByRefreshToken(refreshToken)
                     .ifPresent(userSessionRepository::delete);
         }
 
+        if (jwtToken != null) {
+            long expiryInSeconds = jwtUtil.getRemainingTime(jwtToken);
+            if (expiryInSeconds > 0) tokenBlacklistService.blacklistToken(jwtToken, expiryInSeconds);
+        }
         // Xóa cookie phía client
         clearCookie(response, "jwt_token");
         clearCookie(response, "refresh_token");

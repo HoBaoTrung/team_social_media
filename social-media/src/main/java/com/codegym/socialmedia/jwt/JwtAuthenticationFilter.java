@@ -1,6 +1,7 @@
 package com.codegym.socialmedia.jwt;
 
 import com.codegym.socialmedia.service.user.CustomUserDetailsService;
+import com.codegym.socialmedia.service.user.TokenBlacklistService;
 import com.codegym.socialmedia.service.user.UserSessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,6 +30,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserSessionService userSessionService;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -41,6 +45,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             if (jwtToken != null) {
                 if (jwtUtil.validateToken(jwtToken)) {
+                    if (tokenBlacklistService.isTokenBlacklisted(jwtToken)) {
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been logged out");
+                        return;
+                    }
+
                     // ✅ Token còn hạn → xác thực bình thường
                     authenticateUser(jwtToken, request);
                     userSessionService.updateLastActivity(jwtToken);
