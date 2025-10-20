@@ -19,9 +19,6 @@ public class UserSession {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(length = 255)
-    private String sessionToken;
-
     @Column(length = 255, nullable = false, unique = true)
     private String refreshToken;
 
@@ -40,8 +37,6 @@ public class UserSession {
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private LocalDateTime lastActivity;
-
-    private boolean isActive;
 
     public enum LoginMethod {
         WEB, MOBILE, TABLET

@@ -52,7 +52,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     // ✅ Token còn hạn → xác thực bình thường
                     authenticateUser(jwtToken, request);
-                    userSessionService.updateLastActivity(jwtToken);
+                    userSessionService.updateLastActivity(refreshToken);
                 } else if (jwtUtil.isTokenExpired(jwtToken)) {
                     // ⚠️ Access token hết hạn → thử refresh
                     String newAccessToken = userSessionService.refreshAccessTokenIfNeeded(refreshToken, response);

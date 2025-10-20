@@ -32,7 +32,6 @@ public class UserSessionService {
 
         UserSession session = new UserSession();
         session.setUser(user);
-        session.setSessionToken(accessToken);
         session.setRefreshToken(refreshToken);
         session.setIpAddress(request.getRemoteAddr());
         session.setUserAgent(request.getHeader("User-Agent"));
@@ -41,7 +40,6 @@ public class UserSessionService {
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusDays(30)); // refresh token hết hạn
         session.setLastActivity(LocalDateTime.now());
-        session.setActive(true);
 
         userSessionRepository.save(session);
 
@@ -49,22 +47,6 @@ public class UserSessionService {
         addCookie(response, "jwt_token", accessToken, 10 * 60 * 60);
         // Cookie Refresh Token (30 ngày)
         addCookie(response, "refresh_token", refreshToken, 30 * 24 * 60 * 60);
-    }
-
-    /**
-     * ✅ Kiểm tra session còn hiệu lực (token hợp lệ & active)
-     */
-    public boolean validateSession(String token) {
-        Optional<UserSession> sessionOpt = userSessionRepository.findBySessionTokenAndIsActiveTrue(token);
-        if (sessionOpt.isEmpty()) return false;
-
-        UserSession session = sessionOpt.get();
-        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
-            session.setActive(false);
-            userSessionRepository.save(session);
-            return false;
-        }
-        return true;
     }
 
     /**
@@ -86,7 +68,6 @@ public class UserSessionService {
         String username = session.getUser().getUsername();
         String newAccessToken = jwtUtil.generateToken(username);
 
-        session.setSessionToken(newAccessToken);
         session.setLastActivity(LocalDateTime.now());
         userSessionRepository.save(session);
 
@@ -100,7 +81,7 @@ public class UserSessionService {
      * ✅ Cập nhật thời điểm hoạt động cuối khi người dùng truy cập
      */
     public void updateLastActivity(String token) {
-        userSessionRepository.findBySessionTokenAndIsActiveTrue(token).ifPresent(session -> {
+        userSessionRepository.findByRefreshTokenAndIsActiveTrue(token).ifPresent(session -> {
             session.setLastActivity(LocalDateTime.now());
             userSessionRepository.save(session);
         });

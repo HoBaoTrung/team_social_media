@@ -9,10 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserSessionRepository extends JpaRepository<UserSession, Long> {
-    // Tìm theo token
-    Optional<UserSession> findBySessionToken(String sessionToken);
-
-    Optional<UserSession> findBySessionTokenAndIsActiveTrue(String sessionToken);
     Optional<UserSession> findByRefreshTokenAndIsActiveTrue(String refreshToken);
     Optional<UserSession> findByRefreshToken(String refreshToken);
 
