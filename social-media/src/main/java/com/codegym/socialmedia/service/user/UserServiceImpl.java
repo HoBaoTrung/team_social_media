@@ -110,18 +110,6 @@ public class UserServiceImpl implements UserService {
 
         return null;
     }
-    @Override
-    public List<UserDTO> searchUsers(String keyword, Long currentUserId) {
-        if (keyword == null || keyword.isBlank()) {
-            return Collections.emptyList(); // hoặc trả list rỗng để không hiển thị gì
-        }
-
-        List<User> friends = friendshipRepository.findFriendsByKeyword(currentUserId, keyword);
-
-        return friends.stream()
-                .map(u -> new UserDTO(u)).toList();
-    }
-
 
     @Override
     public User getUserById(Long id) {

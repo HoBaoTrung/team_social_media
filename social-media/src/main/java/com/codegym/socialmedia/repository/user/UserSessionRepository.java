@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserSessionRepository extends JpaRepository<UserSession, Long> {
-    Optional<UserSession> findByRefreshTokenAndIsActiveTrue(String refreshToken);
     Optional<UserSession> findByRefreshToken(String refreshToken);
 
     // Xoá session hết hạn

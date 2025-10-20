@@ -128,11 +128,6 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Post getPostById(long id) {
-        return postRepository.findById(id).orElse(null);
-    }
-
-    @Override
     public Page<PostDisplayDto> getPostsForNewsFeed(User currentUser, Pageable pageable) {
 
         Page<Post> posts = postRepository.findVisiblePosts(currentUser.getId(), pageable);

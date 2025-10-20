@@ -24,14 +24,6 @@ public interface UserService {
 
     boolean existsByUsername(String username);
 
-    boolean existsByEmail(String email);
-
     User createOrUpdateOAuth2User(String email, String name, String provider, String avatar);
 
-    List<User> getAllUsersByIds(List<Long> ids);
-
-    long countUsers();
-
-    void deleteAllUsers();
-    List<UserDTO> searchUsers(String keyword, Long currentUserId);
 }

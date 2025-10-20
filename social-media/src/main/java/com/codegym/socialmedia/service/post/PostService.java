@@ -18,7 +18,7 @@ public interface PostService {
     Post updatePost(Long postId, PostUpdateDto dto, User user);
     void deletePost(Long postId, User user);
     PostDisplayDto getPostById(Long postId, User currentUser);
-    Post getPostById(long id);
+
     // Get posts for different contexts
     Page<PostDisplayDto> getPostsForNewsFeed(User currentUser, Pageable pageable);
     Page<PostDisplayDto> getPostsByUser(User targetUser, User currentUser, Pageable pageable);

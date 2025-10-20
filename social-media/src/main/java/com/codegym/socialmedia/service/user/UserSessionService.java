@@ -53,7 +53,7 @@ public class UserSessionService {
      * ✅ Làm mới accessToken khi accessToken hết hạn nhưng refreshToken còn hạn
      */
     public String refreshAccessTokenIfNeeded(String refreshToken, HttpServletResponse response) {
-        Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshTokenAndIsActiveTrue(refreshToken);
+        Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshToken(refreshToken);
         if (sessionOpt.isEmpty()) return null;
 
         UserSession session = sessionOpt.get();
@@ -81,9 +81,14 @@ public class UserSessionService {
      * ✅ Cập nhật thời điểm hoạt động cuối khi người dùng truy cập
      */
     public void updateLastActivity(String token) {
-        userSessionRepository.findByRefreshTokenAndIsActiveTrue(token).ifPresent(session -> {
-            session.setLastActivity(LocalDateTime.now());
-            userSessionRepository.save(session);
+        userSessionRepository.findByRefreshToken(token).ifPresent(session -> {
+            // Kiểm tra hạn của token
+            if (session.getExpiresAt().isAfter(LocalDateTime.now())) {
+                session.setLastActivity(LocalDateTime.now());
+                userSessionRepository.save(session);
+            } else {
+                userSessionRepository.delete(session);
+            }
         });
     }
 
