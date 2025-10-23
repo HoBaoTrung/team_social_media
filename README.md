@@ -186,7 +186,7 @@ To help you get started with testing the application, the provided SQL script in
 |------------|----------------|----------------|
 | Regular User | `john_doe`       | `12345`  |
 | Regular User | `jane_smith`       | `12345`      |
-| Admin       | `admin1`       | `12345` |
+| Admin       | `admin`       | `12345` |
 
 ### Notes:
 - **Regular User**: These accounts have standard access to the application features.
@@ -196,4 +196,20 @@ To help you get started with testing the application, the provided SQL script in
 ### Steps to Use Sample Data
 1. Run the SQL script (`example-data.sql`) to populate the database.
 2. Log in to the application using the credentials listed above to test different user roles.
+
+## 🐳 Alternatively: Run Everything with Docker Compose (No Code Required)
+If you prefer not to build or run the code manually, you can start the entire project using Docker Compose.
+
+#### Make sure you have Docker and Docker Compose installed, then execute:
+``` bash
+docker compose up -d
+```
+This will automatically:
+* Pull the prebuilt image hotrung/social_media:1.0 from Docker Hub
+
+* Start the Application, MySQL, and Redis containers
+
+* Expose the app at http://localhost:8080
+
+
 

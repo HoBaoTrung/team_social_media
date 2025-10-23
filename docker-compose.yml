@@ -1,0 +1,45 @@
+
+version: "3.9"
+services:
+  app:
+    image: hotrung/social_media:1.0
+    # build:
+    #   context: .
+      # dockerfile: ./Dockerfile
+    container_name: social-media-app
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/social_media?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_REDIS_HOST: ${SPRING_REDIS_HOST}
+      SPRING_REDIS_PORT: ${SPRING_REDIS_PORT}
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: mysql:8.4.0
+    container_name: social-media-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      MYSQL_DATABASE: social_media
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "2012:3306"
+
+  redis:
+    image: redis:7-alpine
+    container_name: social-media-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:
