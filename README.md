@@ -194,7 +194,7 @@ To help you get started with testing the application, the provided SQL script in
 - Ensure that you update the `application-dev-secret.properties` file with the appropriate database credentials to connect to the database and some key.
 
 ### Steps to Use Sample Data
-1. Run the SQL script (`example-data.sql`) to populate the database.
+1. Run the SQL script (`example-data.sql` and `init.sql`) to populate the database.
 2. Log in to the application using the credentials listed above to test different user roles.
 
 ## 🐳 Alternatively: Run Everything with Docker Compose (No Code Required)
@@ -205,7 +205,7 @@ If you prefer not to build or run the code manually, you can start the entire pr
 docker compose up -d
 ```
 This will automatically:
-* Pull the prebuilt image hotrung/social_media:1.0 from Docker Hub
+* Pull the prebuilt image hotrung/social_media:latest from Docker Hub
 
 * Start the Application, MySQL, and Redis containers
 
