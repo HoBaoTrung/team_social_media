@@ -1,3 +1,4 @@
+
 services:
   app:
     image: hotrung/social_media:latest
@@ -7,11 +8,24 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/social_media?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      # Cấu hình database connection
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/social_media?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+
+      # Redis configuration
       SPRING_REDIS_HOST: ${SPRING_REDIS_HOST}
       SPRING_REDIS_PORT: ${SPRING_REDIS_PORT}
+
+      # Đặt timezone cho Java
+      TZ: Asia/Ho_Chi_Minh
+      JAVA_OPTS: "-Duser.timezone=Asia/Ho_Chi_Minh"
+
+    volumes:
+      # Đồng bộ thời gian giữa host và container
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
     depends_on:
       db:
         condition: service_healthy
@@ -26,11 +40,17 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       MYSQL_DATABASE: social_media
+      TZ: Asia/Ho_Chi_Minh
     ports:
       - "2012:3306"
     volumes:
+      # Dữ liệu MySQL và script khởi tạo
       - db_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Đồng bộ timezone
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${SPRING_DATASOURCE_PASSWORD}"]
       interval: 10s
@@ -44,6 +64,11 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
 
 volumes:
   db_data:
