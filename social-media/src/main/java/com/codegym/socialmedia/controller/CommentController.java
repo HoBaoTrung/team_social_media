@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.controller;
 
+import com.codegym.socialmedia.component.CommentAssembler;
 import com.codegym.socialmedia.dto.comment.CommentRequest;
 import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
@@ -30,11 +31,14 @@ public class CommentController {
     @Autowired
     private FriendshipService friendshipService;
 
+    @Autowired
+    private CommentAssembler commentAssembler;
+
     @PostMapping("/comments/add")
     public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
         PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentionedUserIds());
 
-        DisplayCommentDTO newComment = DisplayCommentDTO.mapToDTO(saved, userService.getCurrentUser(),friendshipService);
+        DisplayCommentDTO newComment = commentAssembler.mapToDTO(saved, userService.getCurrentUser());
         newComment.setCanEdit(true);
         newComment.setCanDeleted(true);
         newComment.setCanReply(true);
@@ -51,14 +55,14 @@ public class CommentController {
     @GetMapping("/comment/{id}")
     public DisplayCommentDTO getComment(@PathVariable Long id) {
         PostComment comment = postCommentService.getCommentById(id).orElse(null);
-        return DisplayCommentDTO.mapToDTO(comment, userService.getCurrentUser(),friendshipService);
+        return commentAssembler.mapToDTO(comment, userService.getCurrentUser());
     }
 
     @PutMapping("/comments/{id}")
     public DisplayCommentDTO editComment(@RequestBody CommentRequest req, @PathVariable Long id) {
         User currentUser = userService.getCurrentUser();
         PostComment updated = postCommentService.updateComment(id, currentUser, req.getContent(),req.getMentionedUserIds());
-        return DisplayCommentDTO.mapToDTO(updated, currentUser,friendshipService); // trả về DTO với quyền
+        return commentAssembler.mapToDTO(updated, currentUser); // trả về DTO với quyền
     }
 
     @DeleteMapping("/comments/{id}")
@@ -68,7 +72,7 @@ public class CommentController {
         PostComment deletedComment = postCommentService.deleteComment(id, currentUser);
         if (deletedComment != null) {
             // Trả về DTO
-            DisplayCommentDTO dto =  DisplayCommentDTO.mapToDTO(deletedComment,currentUser,friendshipService);
+            DisplayCommentDTO dto =  commentAssembler.mapToDTO(deletedComment,currentUser);
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "deletedComment", dto

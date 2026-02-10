@@ -1,7 +1,7 @@
 package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.ErrAccountException;
-import com.codegym.socialmedia.component.CloudinaryService;
+import com.codegym.socialmedia.component.upload_file.CloudinaryService;
 import com.codegym.socialmedia.component.UrlMultipartFile;
 import com.codegym.socialmedia.model.account.User;
 import org.springframework.beans.factory.annotation.Autowired;

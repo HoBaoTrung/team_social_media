@@ -104,6 +104,27 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     """)
     Page<Post> findVisiblePosts(@Param("currentUser") Long currentUser, Pageable pageable);
 
+    @Query("""
+        SELECT p FROM Post p
+        WHERE p.isDeleted = false
+          AND (
+               p.privacyLevel = 'PUBLIC'
+            OR (p.privacyLevel = 'FRIENDS' AND p.user.id IN :friendIds)
+            OR p.user.id = :currentUser
+          )
+        ORDER BY p.createdAt DESC
+        """)
+    Page<Post> findVisiblePostsOptimized(
+            @Param("currentUser") Long currentUser,
+            @Param("friendIds") List<Long> friendIds,
+            Pageable pageable
+    );
+
+    @Query(""" 
+                SELECT p FROM Post p WHERE p.isDeleted = false and p.id IN :postIds
+            """)
+    List<Post> findByIdIn(List<Long> postIds);
+
 
     // 8. Find posts by user list (for friends' posts) - THÊM METHOD NÀY
     @Query("SELECT p FROM Post p WHERE p.user IN :users AND p.isDeleted = false " +

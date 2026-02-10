@@ -7,8 +7,7 @@ import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.codegym.socialmedia.model.social_action.PostComment;
-import com.codegym.socialmedia.service.post.PostService;
-import com.codegym.socialmedia.service.post.PostCommentService;
+import com.codegym.socialmedia.service.post.*;
 import com.codegym.socialmedia.service.user.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +31,12 @@ import java.util.Map;
 @RequestMapping("/posts")
 public class PostController {
 
-    @Autowired
-    private PostService postService;
+    @Autowired private PostInteractionService postInteractionService;
+    @Autowired private PostCommandService postCommandService;
+    @Autowired private PostQueryService postQueryService;
+    @Autowired private PostFeedService postFeedService;
+//    @Autowired
+//    private PostService postService;
 
     @Autowired
     private UserService userService;
@@ -58,9 +61,9 @@ public class PostController {
 
         Page<PostDisplayDto> posts;
         if (currentUser != null) {
-            posts = postService.getPostsByUser(targetUser, currentUser, pageable);
+            posts = postQueryService.getPostsByUser(targetUser, currentUser, pageable);
         } else {
-            posts = postService.getPublicPostsByUser(targetUser, currentUser, pageable);
+            posts = postQueryService.getPublicPostsByUser(targetUser, currentUser, pageable);
         }
 
         model.addAttribute("posts", posts);
@@ -92,7 +95,7 @@ public class PostController {
         }
 
         try {
-            postService.createPost(dto, currentUser);
+            postCommandService.createPost(dto, currentUser);
             redirectAttributes.addFlashAttribute("success", "Đăng bài thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
@@ -119,7 +122,7 @@ public class PostController {
 
         try {
             dto.setId(id);
-            postService.updatePost(id, dto, currentUser);
+            postCommandService.updatePost(id, dto, currentUser);
             redirectAttributes.addFlashAttribute("success", "Cập nhật bài viết thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
@@ -137,7 +140,7 @@ public class PostController {
         }
 
         try {
-            postService.deletePost(id, currentUser);
+            postCommandService.deletePost(id, currentUser);
             redirectAttributes.addFlashAttribute("success", "Xóa bài viết thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
@@ -162,7 +165,7 @@ public class PostController {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<PostDisplayDto> posts = postService.searchUserPosts(user, currentUser, keyword, pageable);
+        Page<PostDisplayDto> posts = postQueryService.searchUserPosts(user, currentUser, keyword, pageable);
 
         return ResponseEntity.ok(posts);
     }
@@ -188,8 +191,8 @@ public class PostController {
         }
 
         try {
-            Post post = postService.createPost(dto, currentUser);
-            PostDisplayDto postDto = postService.getPostById(post.getId(), currentUser);
+            Post post = postCommandService.createPost(dto, currentUser);
+            PostDisplayDto postDto = postQueryService.getPostById(post.getId(), currentUser);
 
             response.put("success", true);
             response.put("message", "Đăng bài thành công!");
@@ -221,12 +224,12 @@ public class PostController {
         }
         if (postID == -1 && commentID == -1) {
             Pageable pageable = PageRequest.of(page, size);
-            Page<PostDisplayDto> posts = postService.getPostsForNewsFeed(currentUser, pageable);
+            Page<PostDisplayDto> posts = postFeedService.getFeed(currentUser, pageable);
 
             return ResponseEntity.ok(posts);
         }
 
-        PostDisplayDto postDto = postService.getPostById(postID, currentUser);
+        PostDisplayDto postDto = postQueryService.getPostById(postID, currentUser);
         return ResponseEntity.ok(postDto);
     }
 
@@ -249,9 +252,9 @@ public class PostController {
 
         Page<PostDisplayDto> posts;
         if (currentUser != null) {
-            posts = postService.getPostsByUser(targetUser, currentUser, pageable);
+            posts = postQueryService.getPostsByUser(targetUser, currentUser, pageable);
         } else {
-            posts = postService.getPublicPostsByUser(targetUser, currentUser, pageable);
+            posts = postQueryService.getPublicPostsByUser(targetUser, currentUser, pageable);
         }
 
         return ResponseEntity.ok(posts);
@@ -272,9 +275,9 @@ public class PostController {
             // Get all posts with images
             Page<PostDisplayDto> posts;
             if (currentUser != null) {
-                posts = postService.getPostsByUser(targetUser, currentUser, PageRequest.of(0, 100));
+                posts = postQueryService.getPostsByUser(targetUser, currentUser, PageRequest.of(0, 100));
             } else {
-                posts = postService.getPublicPostsByUser(targetUser, currentUser, PageRequest.of(0, 100));
+                posts = postQueryService.getPublicPostsByUser(targetUser, currentUser, PageRequest.of(0, 100));
             }
 
             // Extract all images from posts
@@ -309,7 +312,7 @@ public class PostController {
         }
 
         try {
-            boolean isLiked = postService.toggleLike(id, currentUser);
+            boolean isLiked = postInteractionService.toggleLike(id, currentUser);
 
             response.put("success", true);
             response.put("isLiked", isLiked);
@@ -328,7 +331,7 @@ public class PostController {
         User currentUser = userService.getCurrentUser();
 
         try {
-            PostDisplayDto post = postService.getPostById(id, currentUser);
+            PostDisplayDto post = postQueryService.getPostById(id, currentUser);
             return ResponseEntity.ok(post);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
@@ -358,8 +361,8 @@ public class PostController {
 
         try {
             dto.setId(id);
-            Post post = postService.updatePost(id, dto, currentUser);
-            PostDisplayDto postDto = postService.getPostById(post.getId(), currentUser);
+            Post post = postCommandService.updatePost(id, dto, currentUser);
+            PostDisplayDto postDto = postQueryService.getPostById(post.getId(), currentUser);
 
             response.put("success", true);
             response.put("message", "Cập nhật bài viết thành công!");
@@ -385,7 +388,7 @@ public class PostController {
         }
 
         try {
-            postService.deletePost(id, currentUser);
+            postCommandService.deletePost(id, currentUser);
             response.put("success", true);
             response.put("message", "Xóa bài viết thành công!");
             return ResponseEntity.ok(response);

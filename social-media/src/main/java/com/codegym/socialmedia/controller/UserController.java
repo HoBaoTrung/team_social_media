@@ -1,6 +1,6 @@
 package com.codegym.socialmedia.controller;
 
-import com.codegym.socialmedia.component.PrivacyUtils;
+import com.codegym.socialmedia.component.privacy.PrivacyPolicyResolver;
 import com.codegym.socialmedia.dto.user.UserRegistrationDto;
 import com.codegym.socialmedia.dto.user.UserPasswordDto;
 import com.codegym.socialmedia.dto.user.UserUpdateDto;
@@ -13,7 +13,7 @@ import com.codegym.socialmedia.model.account.UserPrivacySettings;
 import com.codegym.socialmedia.model.social_action.Friendship;
 import com.codegym.socialmedia.repository.user.UserPrivacySettingsRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
-import com.codegym.socialmedia.service.post.PostService;
+import com.codegym.socialmedia.service.post.PostStatService;
 import com.codegym.socialmedia.service.user.UserService;
 import com.codegym.socialmedia.service.user.UserStatsService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,8 +36,7 @@ import java.util.Map;
 
 @Controller
 public class UserController {
-    @Autowired
-    private PostService postService;
+
     @Autowired
     private UserPrivacySettingsRepository privacySettingsRepository;
 
@@ -51,9 +50,15 @@ public class UserController {
     private FriendshipService friendshipService;
 
     @Autowired
-    private UserStatsService userStatsService;
-    // =============== PROFILE ===============
+    private PrivacyPolicyResolver privacyPolicyResolver;
 
+    @Autowired
+    private UserStatsService userStatsService;
+
+    @Autowired
+    private PostStatService postStatService;
+
+    // =============== PROFILE ===============
     @GetMapping("/profile/{username}")
     public String viewProfile(
             @RequestParam(value = "filter", defaultValue = "posts") String filter,
@@ -63,68 +68,220 @@ public class UserController {
         User viewedUser = userService.getUserByUsername(username);
         User currentUser = userService.getCurrentUser();
 
-        boolean isOwner = currentUser != null
-                && viewedUser != null
-                && currentUser.getId() != null
-                && currentUser.getId().equals(viewedUser.getId());
+        boolean isOwner = isOwner(currentUser, viewedUser);
 
-        // Friendship check
-        Friendship friendship = null;
-        if (!isOwner && currentUser != null) {
-            friendship = friendshipService.findByUsers(currentUser.getId(), viewedUser.getId());
-            if (friendship != null) {
-                boolean isSender = friendship.getRequester() != null
-                        && currentUser.getId().equals(friendship.getRequester().getId());
-                boolean isReceiver = friendship.getAddressee() != null
-                        && currentUser.getId().equals(friendship.getAddressee().getId());
-                model.addAttribute("isSender", isSender);
-                model.addAttribute("isReceiver", isReceiver);
-            }
-        }
+        Friendship friendship = resolveFriendship(
+                currentUser,
+                viewedUser,
+                isOwner,
+                model
+        );
 
         Friendship.FriendshipStatus friendshipStatus =
                 friendshipService.getFriendshipStatus(viewedUser, currentUser);
-        boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);
+
+        boolean isFriend = friendshipStatus == Friendship.FriendshipStatus.ACCEPTED;
 
         UserPrivacySettings privacy = viewedUser.getPrivacySettings();
 
-        // Các quyền hiển thị
-        model.addAttribute("canViewEmail", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowEmail(), isFriend));
-        model.addAttribute("canViewPhone", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowPhone(), isFriend));
-        model.addAttribute("canViewDob", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowDob(), isFriend));
-        model.addAttribute("canViewBio", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowBio(), isFriend));
-        model.addAttribute("canSendMessage", PrivacyUtils.canView(currentUser, viewedUser, privacy.getAllowSendMessage(), isFriend));
-        model.addAttribute("canViewFriendList", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowFriendList(), isFriend));
-        model.addAttribute("allowFriendRequests", privacy.isAllowFriendRequests());
+        // ===== Privacy checks =====
+        addPrivacyAttributes(model, currentUser, viewedUser, privacy, isFriend);
 
-        // Danh sách bạn cho tab Friends/Mutual
-        Page<FriendDto> friends = Page.empty();
-        if ("mutual".equalsIgnoreCase(filter)
-                || (!isFriend && !privacy.getShowFriendList().equals(PrivacyLevel.PUBLIC))) {
-            friends = friendshipService.findMutualFriends(viewedUser.getId(), currentUser.getId(), 0, 10);
-        } else if (isOwner || isFriend || !privacy.getShowFriendList().equals(PrivacyLevel.PRIVATE)) {
-            friends = friendshipService.getVisibleFriendList(viewedUser, 0, 10);
-        } else {
-            friends = Page.empty(); // Tránh NullPointer
-        }
+        // ===== Friends tab =====
+        Page<FriendDto> friends = resolveFriends(
+                filter,
+                isOwner,
+                isFriend,
+                privacy,
+                viewedUser,
+                currentUser
+        );
 
         model.addAttribute("friends", friends.getContent());
         model.addAttribute("friendCount", friendshipService.countFriends(viewedUser.getId()));
-        model.addAttribute("mutualFriendsCount", friendshipService.countMutualFriends(
-                currentUser != null ? currentUser.getId() : null,
-                viewedUser.getId()
-        ));
+        model.addAttribute("mutualFriendsCount",
+                friendshipService.countMutualFriends(
+                        currentUser != null ? currentUser.getId() : null,
+                        viewedUser.getId()
+                )
+        );
+
         model.addAttribute("user", viewedUser);
         model.addAttribute("isOwner", isOwner);
         model.addAttribute("friendshipStatus", friendshipStatus.name());
         model.addAttribute("targetUserId", viewedUser.getId());
         model.addAttribute("filter", filter);
 
-        // Placeholder cho posts (sau bạn bind từ PostService)
         model.addAttribute("posts", new ArrayList<>());
 
         return "profile/view";
     }
+
+    private boolean isOwner(User currentUser, User viewedUser) {
+        return currentUser != null
+                && viewedUser != null
+                && currentUser.getId() != null
+                && currentUser.getId().equals(viewedUser.getId());
+    }
+
+    private Friendship resolveFriendship(
+            User currentUser,
+            User viewedUser,
+            boolean isOwner,
+            Model model
+    ) {
+        if (isOwner || currentUser == null) {
+            return null;
+        }
+
+        Friendship friendship =
+                friendshipService.findByUsers(currentUser.getId(), viewedUser.getId());
+
+        if (friendship != null) {
+            Long currentUserId = currentUser.getId();
+            model.addAttribute("isSender",
+                    friendship.getRequester() != null
+                            && currentUserId.equals(friendship.getRequester().getId()));
+            model.addAttribute("isReceiver",
+                    friendship.getAddressee() != null
+                            && currentUserId.equals(friendship.getAddressee().getId()));
+        }
+
+        return friendship;
+    }
+
+    private void addPrivacyAttributes(
+            Model model,
+            User viewer,
+            User owner,
+            UserPrivacySettings privacy,
+            boolean isFriend
+    ) {
+        model.addAttribute("canViewEmail",
+                privacyPolicyResolver.canView(
+                        viewer, owner, privacy.getShowEmail(), isFriend));
+
+        model.addAttribute("canViewPhone",
+                privacyPolicyResolver.canView(
+                        viewer, owner, privacy.getShowPhone(), isFriend));
+
+        model.addAttribute("canViewDob",
+                privacyPolicyResolver.canView(
+                        viewer, owner, privacy.getShowDob(), isFriend));
+
+        model.addAttribute("canViewBio",
+                privacyPolicyResolver.canView(
+                        viewer, owner, privacy.getShowBio(), isFriend));
+
+        model.addAttribute("canSendMessage",
+                privacyPolicyResolver.canView(
+                        viewer, owner, privacy.getAllowSendMessage(), isFriend));
+
+        model.addAttribute("canViewFriendList",
+                privacyPolicyResolver.canView(
+                        viewer, owner, privacy.getShowFriendList(), isFriend));
+
+        model.addAttribute("allowFriendRequests",
+                privacy.isAllowFriendRequests());
+    }
+
+    private Page<FriendDto> resolveFriends(
+            String filter,
+            boolean isOwner,
+            boolean isFriend,
+            UserPrivacySettings privacy,
+            User viewedUser,
+            User currentUser
+    ) {
+        if ("mutual".equalsIgnoreCase(filter)
+                || (!isFriend && privacy.getShowFriendList() != PrivacyLevel.PUBLIC)) {
+
+            return friendshipService.findMutualFriends(
+                    viewedUser.getId(),
+                    currentUser != null ? currentUser.getId() : null,
+                    0,
+                    10
+            );
+        }
+
+        if (isOwner || isFriend || privacy.getShowFriendList() != PrivacyLevel.PRIVATE) {
+            return friendshipService.getVisibleFriendList(viewedUser, 0, 10);
+        }
+
+        return Page.empty();
+    }
+
+//    @GetMapping("/profile/{username}")
+//    public String viewProfile(
+//            @RequestParam(value = "filter", defaultValue = "posts") String filter,
+//            @PathVariable String username,
+//            Model model) {
+//
+//        User viewedUser = userService.getUserByUsername(username);
+//        User currentUser = userService.getCurrentUser();
+//
+//        boolean isOwner = currentUser != null
+//                && viewedUser != null
+//                && currentUser.getId() != null
+//                && currentUser.getId().equals(viewedUser.getId());
+//
+//        // Friendship check
+//        Friendship friendship = null;
+//        if (!isOwner && currentUser != null) {
+//            friendship = friendshipService.findByUsers(currentUser.getId(), viewedUser.getId());
+//            if (friendship != null) {
+//                boolean isSender = friendship.getRequester() != null
+//                        && currentUser.getId().equals(friendship.getRequester().getId());
+//                boolean isReceiver = friendship.getAddressee() != null
+//                        && currentUser.getId().equals(friendship.getAddressee().getId());
+//                model.addAttribute("isSender", isSender);
+//                model.addAttribute("isReceiver", isReceiver);
+//            }
+//        }
+//
+//        Friendship.FriendshipStatus friendshipStatus =
+//                friendshipService.getFriendshipStatus(viewedUser, currentUser);
+//        boolean isFriend = (friendshipStatus == Friendship.FriendshipStatus.ACCEPTED);
+//
+//        UserPrivacySettings privacy = viewedUser.getPrivacySettings();
+//
+//        // Các quyền hiển thị
+//        model.addAttribute("canViewEmail", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowEmail(), isFriend));
+//        model.addAttribute("canViewPhone", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowPhone(), isFriend));
+//        model.addAttribute("canViewDob", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowDob(), isFriend));
+//        model.addAttribute("canViewBio", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowBio(), isFriend));
+//        model.addAttribute("canSendMessage", PrivacyUtils.canView(currentUser, viewedUser, privacy.getAllowSendMessage(), isFriend));
+//        model.addAttribute("canViewFriendList", PrivacyUtils.canView(currentUser, viewedUser, privacy.getShowFriendList(), isFriend));
+//        model.addAttribute("allowFriendRequests", privacy.isAllowFriendRequests());
+//
+//        // Danh sách bạn cho tab Friends/Mutual
+//        Page<FriendDto> friends = Page.empty();
+//        if ("mutual".equalsIgnoreCase(filter)
+//                || (!isFriend && !privacy.getShowFriendList().equals(PrivacyLevel.PUBLIC))) {
+//            friends = friendshipService.findMutualFriends(viewedUser.getId(), currentUser.getId(), 0, 10);
+//        } else if (isOwner || isFriend || !privacy.getShowFriendList().equals(PrivacyLevel.PRIVATE)) {
+//            friends = friendshipService.getVisibleFriendList(viewedUser, 0, 10);
+//        } else {
+//            friends = Page.empty(); // Tránh NullPointer
+//        }
+//
+//        model.addAttribute("friends", friends.getContent());
+//        model.addAttribute("friendCount", friendshipService.countFriends(viewedUser.getId()));
+//        model.addAttribute("mutualFriendsCount", friendshipService.countMutualFriends(
+//                currentUser != null ? currentUser.getId() : null,
+//                viewedUser.getId()
+//        ));
+//        model.addAttribute("user", viewedUser);
+//        model.addAttribute("isOwner", isOwner);
+//        model.addAttribute("friendshipStatus", friendshipStatus.name());
+//        model.addAttribute("targetUserId", viewedUser.getId());
+//        model.addAttribute("filter", filter);
+//
+//        // Placeholder cho posts (sau bạn bind từ PostService)
+//        model.addAttribute("posts", new ArrayList<>());
+//
+//        return "profile/view";
+//    }
 
     // =============== AUTH / NAV ===============
 
@@ -135,8 +292,8 @@ public class UserController {
 
     @GetMapping("/login")
     public String loginForm(
-                            @RequestParam(value = "logout", required = false) String logout,
-                            Model model, HttpServletRequest request) {
+            @RequestParam(value = "logout", required = false) String logout,
+            Model model, HttpServletRequest request) {
 
         model.addAttribute("loginAction", "/login");
 
@@ -310,6 +467,7 @@ public class UserController {
         Map<String, Long> stats = userStatsService.getUserStats(currentUser);
         return ResponseEntity.ok(stats);
     }
+
     @GetMapping("/{username}/photos")
     public ResponseEntity<List<String>> getProfilePhotos(@PathVariable String username) {
         User profileOwner = userService.getUserByUsername(username);
@@ -319,10 +477,11 @@ public class UserController {
 
         User currentUser = userService.getCurrentUser();
 
-        List<String> photos = postService.getPhotosForProfile(profileOwner, currentUser);
+        List<String> photos = postStatService.getPhotosForProfile(profileOwner, currentUser);
 
         return ResponseEntity.ok(photos);
     }
+
     @GetMapping("/api/friends/search")
     public ResponseEntity<List<UserSearchDto>> searchFriends(
             @RequestParam String keyword) {

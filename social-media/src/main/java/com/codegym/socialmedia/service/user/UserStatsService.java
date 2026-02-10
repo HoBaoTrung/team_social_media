@@ -2,7 +2,7 @@ package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
-import com.codegym.socialmedia.service.post.PostService;
+import com.codegym.socialmedia.service.post.PostStatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +15,7 @@ public class UserStatsService {
     @Autowired
     private FriendshipService friendshipService;
 
-    @Autowired
-    private PostService postService;
+    @Autowired private PostStatService postStatService;
 
     public Map<String, Long> getUserStats(User user) {
         Map<String, Long> stats = new HashMap<>();
@@ -31,7 +30,7 @@ public class UserStatsService {
 
         try {
             // Count posts
-            long postsCount = postService.countUserPosts(user);
+            long postsCount = postStatService.countUserPosts(user);
             stats.put("posts", postsCount);
         } catch (Exception e) {
             stats.put("posts", 0L);

@@ -1,8 +1,9 @@
-package com.codegym.socialmedia.component;
+package com.codegym.socialmedia.component.upload_file;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -10,10 +11,12 @@ import java.io.IOException;
 import java.util.Map;
 
 @Component
-public class CloudinaryService {
+@Profile("cloudinary")
+public class CloudinaryService implements ImageUploader{
     @Autowired
     private Cloudinary cloudinary;
 
+    @Override
     public String upload(MultipartFile file) {
         try {
             Map uploadResult = cloudinary.uploader().upload(file.getBytes(),

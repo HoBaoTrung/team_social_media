@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.service.post;
 
+import com.codegym.socialmedia.component.CommentAssembler;
 import com.codegym.socialmedia.dto.comment.DisplayCommentDTO;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.*;
@@ -21,8 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import static com.codegym.socialmedia.dto.comment.DisplayCommentDTO.mapToDTO;
-
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -35,6 +34,7 @@ public class PostCommentServiceImpl implements PostCommentService {
     private final NotificationService notificationService;
     private final FriendshipService friendshipService;
     private final MentionRepository mentionRepository;
+    private final CommentAssembler commentAssembler;
 
     @Override
     public PostComment addComment(Long postId, User user, String content, List<Long> mentionIds) {
@@ -112,7 +112,7 @@ public class PostCommentServiceImpl implements PostCommentService {
             }
 
             // ✅ Trả về reply mới (không load lại parent)
-            return DisplayCommentDTO.mapToDTO(savedReply, currentUser, friendshipService);
+            return commentAssembler.mapToDTO(savedReply, currentUser);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -168,7 +168,7 @@ public class PostCommentServiceImpl implements PostCommentService {
         Pageable pageable = PageRequest.of(page, size);
         Page<PostComment> comments = postCommentRepository.findRecentCommentsByPost(post, pageable);
 
-        return comments.map(comment -> mapToDTO(comment, currentUser,friendshipService));
+        return comments.map(comment -> commentAssembler.mapToDTO(comment, currentUser));
     }
 
     @Override

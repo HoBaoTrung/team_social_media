@@ -5,6 +5,7 @@ import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PostDisplayDto {
 
     private Long id;

@@ -1,6 +1,6 @@
 package com.codegym.socialmedia.service.chat;
 
-import com.codegym.socialmedia.component.CloudinaryService;
+import com.codegym.socialmedia.component.upload_file.CloudinaryService;
 import com.codegym.socialmedia.dto.chat.*;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.conversation.*;

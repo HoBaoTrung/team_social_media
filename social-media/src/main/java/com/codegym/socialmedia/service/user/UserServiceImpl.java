@@ -1,7 +1,6 @@
 package com.codegym.socialmedia.service.user;
 
-import com.codegym.socialmedia.component.CloudinaryService;
-import com.codegym.socialmedia.dto.user.UserDTO;
+import com.codegym.socialmedia.component.upload_file.CloudinaryService;
 import com.codegym.socialmedia.dto.user.UserRegistrationDto;
 import com.codegym.socialmedia.model.account.NotificationSettings;
 import com.codegym.socialmedia.model.account.Role;
