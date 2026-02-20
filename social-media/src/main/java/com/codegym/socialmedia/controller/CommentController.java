@@ -11,11 +11,13 @@ import com.codegym.socialmedia.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -28,13 +30,11 @@ public class CommentController {
     @Autowired
     private final UserService userService;
 
-    @Autowired
-    private FriendshipService friendshipService;
 
     @Autowired
     private CommentAssembler commentAssembler;
 
-    @PostMapping("/comments/add")
+    @PostMapping("/comments")
     public DisplayCommentDTO addComment(@RequestBody CommentRequest req) {
         PostComment saved = postCommentService.addComment(req.getPostId(), userService.getCurrentUser(), req.getContent(), req.getMentionedUserIds());
 
@@ -45,14 +45,17 @@ public class CommentController {
         return newComment;
     }
 
-    @GetMapping("/comments/{postId}")
-    public Page<DisplayCommentDTO> getComments(@PathVariable Long postId,
-                                               @RequestParam(defaultValue = "0") int page,
-                                               @RequestParam(defaultValue = "10") int size) {
-        return postCommentService.getCommentsByPost(postId, userService.getCurrentUser(), page, size);
+
+    @GetMapping("/posts/{postId}/comments")
+    public ResponseEntity<List<DisplayCommentDTO>> getCommentsByPost(@PathVariable Long postId,
+                                                               @RequestParam(defaultValue = "0") int page,
+                                                               @RequestParam(defaultValue = "10") int size) {
+        Page<DisplayCommentDTO> commentsPage = postCommentService.getCommentsByPost(postId, userService.getCurrentUser(), page, size);
+        List<DisplayCommentDTO> dtos = commentsPage.getContent().stream().toList();
+        return ResponseEntity.ok(dtos);
     }
 
-    @GetMapping("/comment/{id}")
+    @GetMapping("/comments/{id}")
     public DisplayCommentDTO getComment(@PathVariable Long id) {
         PostComment comment = postCommentService.getCommentById(id).orElse(null);
         return commentAssembler.mapToDTO(comment, userService.getCurrentUser());

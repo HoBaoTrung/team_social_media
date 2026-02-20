@@ -24,17 +24,25 @@ public class CommentAssembler {
     /**
      * Convert một comment thành DTO với depth control (1 gốc và tối đa 3 cấp hậu duệ).
      */
-    public DisplayCommentDTO mapToDTO(PostComment root,
-                                             User currentUser
-                                             ) {
-        DisplayCommentDTO rootDto =
-                buildDtoBase(root, currentUser);
-        int maxDepth = 2;
+    public DisplayCommentDTO mapToDTO(PostComment root, User currentUser) {
+        DisplayCommentDTO rootDto = buildDtoBase(root, currentUser);
+        int maxDepth = 3;
         rootDto.setComment(renderContent(root.getContent(), root.getMentionedUsers()));
         rootDto.setReplies(new ArrayList<>());
 
+        traverseComments(root, currentUser, maxDepth, rootDto);
+        return rootDto;
+    }
+
+    private void traverseComments(
+            PostComment root,
+            User currentUser,
+            int maxDepth,
+            DisplayCommentDTO rootDto
+    ) {
         Deque<CommentFrame> stack = new ArrayDeque<>();
         stack.push(new CommentFrame(root, 1, rootDto));
+
         while (!stack.isEmpty()) {
             CommentFrame frame = stack.pop();
             PostComment current = frame.comment();
@@ -50,58 +58,30 @@ public class CommentAssembler {
                 List<DisplayCommentDTO> children = new ArrayList<>();
                 parentDto.setReplies(children);
 
+                //  Add vào children theo đúng thứ tự sorted
                 for (PostComment child : sorted) {
-                    DisplayCommentDTO childDto =
-                            buildDtoBase(child, currentUser);
-                    childDto.setComment(renderContent(
-                            child.getContent(), child.getMentionedUsers()));
+                    DisplayCommentDTO childDto = buildDtoBase(child, currentUser);
+                    childDto.setComment(renderContent(child.getContent(), child.getMentionedUsers()));
                     childDto.setReplies(new ArrayList<>());
                     children.add(childDto);
+                }
 
+                //  Push vào stack theo thứ tự ngược để DFS đúng
+                for (int i = sorted.size() - 1; i >= 0; i--) {
+                    PostComment child = sorted.get(i);
+                    DisplayCommentDTO childDto = children.get(i);
                     stack.push(new CommentFrame(child, depth + 1, childDto));
                 }
+
+
             } else {
-                // flatten
                 List<DisplayCommentDTO> flat = new ArrayList<>();
                 collectDescendantsFlat(current, flat, currentUser);
                 parentDto.setReplies(flat.isEmpty() ? null : flat);
             }
         }
-
-        return rootDto;
-//        return getComment(root, currentUser, friendshipService, 3);
     }
 
-//    private DisplayCommentDTO getComment(PostComment comment,
-//                                                User currentUser,
-//                                                int depth) {
-//        // Build base DTO
-//        DisplayCommentDTO dto = buildDtoBase(comment, currentUser);
-//
-//        // Render content sau khi build base
-//        dto.setComment(renderContent(comment.getContent(), comment.getMentionedUsers()));
-//
-//        // Xử lý replies
-//        if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
-//            if (depth > 1) {
-//                List<DisplayCommentDTO> replies = new ArrayList<>();
-//                for (PostComment reply : sortComments(comment.getReplies())) {
-//                    DisplayCommentDTO replyDTO =
-//                            getComment(reply, currentUser, depth - 1);
-//                    replies.add(replyDTO);
-//                }
-//                dto.setReplies(replies);
-//            } else {
-//                List<DisplayCommentDTO> flatDescendants = new ArrayList<>();
-//                collectDescendantsFlat(comment, flatDescendants, currentUser);
-//                dto.setReplies(flatDescendants.isEmpty() ? null : flatDescendants);
-//            }
-//        } else {
-//            dto.setReplies(null);
-//        }
-//
-//        return dto;
-//    }
 
     /**
      * Build dữ liệu cơ bản cho DTO (không set replies, không render content).
@@ -165,20 +145,36 @@ public class CommentAssembler {
         return dto;
     }
 
-    private void collectDescendantsFlat(PostComment root,
-                                               List<DisplayCommentDTO> collector,
-                                               User currentUser
-                                               ) {
-        if (root.getReplies() == null || root.getReplies().isEmpty()) return;
+    private void collectDescendantsFlat(
+            PostComment root,
+            List<DisplayCommentDTO> collector,
+            User currentUser
+    ) {
+        Deque<PostComment> stack = new ArrayDeque<>();
+        stack.push(root);
 
-        for (PostComment child : sortComments(root.getReplies())) {
-            DisplayCommentDTO leaf = buildDtoBase(child, currentUser);
-            leaf.setComment(renderContent(child.getContent(), child.getMentionedUsers()));
-            leaf.setReplies(null);
-            collector.add(leaf);
-            collectDescendantsFlat(child, collector, currentUser);
+        while (!stack.isEmpty()) {
+            PostComment current = stack.pop();
+
+            List<PostComment> replies = current.getReplies();
+            if (replies == null || replies.isEmpty()) continue;
+
+            List<PostComment> sorted = sortComments(replies);
+
+            // push ngược lại để giữ thứ tự
+            for (int i = sorted.size() - 1; i >= 0; i--) {
+                PostComment child = sorted.get(i);
+
+                DisplayCommentDTO leaf = buildDtoBase(child, currentUser);
+                leaf.setComment(renderContent(child.getContent(), child.getMentionedUsers()));
+                leaf.setReplies(null);
+                collector.add(leaf);
+
+                stack.push(child);
+            }
         }
     }
+
 
     private static List<PostComment> sortComments(Collection<PostComment> comments) {
         return comments.stream()
@@ -192,28 +188,51 @@ public class CommentAssembler {
     private static String renderContent(String content, List<User> mentions) {
         if (content == null || content.isEmpty()) return "";
 
-        StringBuilder out = new StringBuilder();
-        int idx = 0;
         int len = content.length();
+        StringBuilder out = new StringBuilder(len);
 
-        // Sắp xếp mentions theo tên dài trước
-        List<User> sortedMentions = new ArrayList<>(mentions != null ? mentions : Collections.emptyList());
-        sortedMentions.sort(Comparator.comparingInt(
-                u -> -((u.getFirstName() == null ? 0 : u.getFirstName().length())
-                        + (u.getLastName() == null ? 0 : u.getLastName().length()) + 1))
-        );
+        // ===== 1. Build lookup structures =====
+        Map<String, User> mentionMap = new HashMap<>();
+        Set<Integer> nameLengths = new HashSet<>();
+
+        if (mentions != null) {
+            for (User u : mentions) {
+                String first = u.getFirstName() == null ? "" : u.getFirstName().trim();
+                String last = u.getLastName() == null ? "" : u.getLastName().trim();
+                String fullName = (first + (last.isEmpty() ? "" : " " + last)).trim();
+
+                if (!fullName.isEmpty()) {
+                    String key = fullName.toLowerCase();
+                    mentionMap.put(key, u);
+                    nameLengths.add(fullName.length());
+                }
+            }
+        }
+
+        // Sort độ dài giảm dần để tránh prefix bug
+        List<Integer> sortedLengths = new ArrayList<>(nameLengths);
+        sortedLengths.sort(Collections.reverseOrder());
+
+        // ===== 2. Parse content =====
+        int idx = 0;
 
         while (idx < len) {
             int at = content.indexOf('@', idx);
+
             if (at == -1) {
                 out.append(HtmlUtils.htmlEscape(content.substring(idx)));
                 break;
             }
+
+            // append phần trước @
             if (at > idx) {
                 out.append(HtmlUtils.htmlEscape(content.substring(idx, at)));
             }
 
-            boolean okBoundaryBefore = (at == 0) || Character.isWhitespace(content.charAt(at - 1));
+            // check boundary trước @
+            boolean okBoundaryBefore =
+                    (at == 0) || Character.isWhitespace(content.charAt(at - 1));
+
             if (!okBoundaryBefore) {
                 out.append(HtmlUtils.htmlEscape("@"));
                 idx = at + 1;
@@ -221,32 +240,37 @@ public class CommentAssembler {
             }
 
             boolean matched = false;
-            for (User u : sortedMentions) {
-                String first = u.getFirstName() == null ? "" : u.getFirstName().trim();
-                String last = u.getLastName() == null ? "" : u.getLastName().trim();
-                if (first.isEmpty() && last.isEmpty()) continue;
 
-                String fullName = (first + (last.isEmpty() ? "" : " " + last)).trim();
-                if (fullName.isEmpty()) continue;
-
-                int nameLen = fullName.length();
+            // ===== 3. Try match by name length =====
+            for (int nameLen : sortedLengths) {
                 int endPos = at + 1 + nameLen;
 
-                if (endPos <= len) {
-                    String candidate = content.substring(at + 1, endPos);
-                    if (candidate.equalsIgnoreCase(fullName)) {
-                        if (endPos == len || !Character.isLetterOrDigit(content.charAt(endPos))) {
-                            String anchor = "<a class=\"mention\""
-                                    + " href=\"/profile/" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
-                                    + " data-username=\"" + HtmlUtils.htmlEscape(u.getUsername()) + "\""
-                                    + " aria-label=\"mention " + HtmlUtils.htmlEscape(fullName) + "\">"
-                                    + HtmlUtils.htmlEscape("@" + fullName)
-                                    + "</a>";
-                            out.append(anchor);
-                            idx = endPos;
-                            matched = true;
-                            break;
-                        }
+                if (endPos > len) continue;
+
+                String candidate = content.substring(at + 1, endPos);
+                User user = mentionMap.get(candidate.toLowerCase());
+
+                if (user != null) {
+                    // check boundary sau
+                    if (endPos == len ||
+                            !Character.isLetterOrDigit(content.charAt(endPos))) {
+
+                        String fullName = candidate;
+
+                        String escapedUsername = HtmlUtils.htmlEscape(user.getUsername());
+                        String escapedFullName = HtmlUtils.htmlEscape(fullName);
+
+                        String anchor = "<a class=\"mention\""
+                                + " href=\"/profile/" + escapedUsername + "\""
+                                + " data-username=\"" + escapedUsername + "\""
+                                + " aria-label=\"mention " + escapedFullName + "\">"
+                                + "@" + escapedFullName
+                                + "</a>";
+
+                        out.append(anchor);
+                        idx = endPos;
+                        matched = true;
+                        break;
                     }
                 }
             }
@@ -259,4 +283,5 @@ public class CommentAssembler {
 
         return out.toString();
     }
+
 }

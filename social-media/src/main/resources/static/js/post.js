@@ -865,7 +865,7 @@ class PostManager {
         const size = st.size;
 
         return $.ajax({
-            url: `/api/comments/${postId}`,
+            url: `/api/posts/${postId}/comments`,
             type: 'GET',
             data: {page, size}
         }).done((data) => {
@@ -873,13 +873,17 @@ class PostManager {
             const $container = $(`#comments-list-${postId}`);
             if (!append) $container.empty();
 
-            (data.content || []).forEach(c => {
+            // (data.content || []).forEach(c => {
+            //     this.appendCommentToUI(postId, c, 'append');
+            // });
+
+            (data || []).forEach(c => {
                 this.appendCommentToUI(postId, c, 'append');
             });
 
             // cập nhật phân trang
             st.page = page + 1;
-            st.hasMore = (data.content || []).length === size;
+            st.hasMore = (data || []).length === size;
         }).fail((xhr) => {
             console.error('Lỗi load comments:', xhr?.responseText || xhr?.statusText);
         }).always(() => {
@@ -1108,7 +1112,9 @@ class PostManager {
         const originalElement = commentTextEl.cloneNode(true);
 
         try {
-            const response = await fetch(`/api/comment/${commentId}`);
+            const response = await fetch(`/api/comments/${commentId}`, {
+                method: 'GET'
+            });
             if (!response.ok) throw new Error('Failed to fetch comment');
             const comment = await response.json();
 
@@ -1330,7 +1336,7 @@ class PostManager {
 
         try {
             const mentionedUserIds = [...new Set(Array.from(commentInput.querySelectorAll('.mention')).map(span => parseInt(span.dataset.userId)))];
-            const res = await fetch('/api/comments/add', {
+            const res = await fetch('/api/comments', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({postId, content, mentionedUserIds})

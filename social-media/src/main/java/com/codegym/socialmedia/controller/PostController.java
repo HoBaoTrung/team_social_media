@@ -30,7 +30,6 @@ import java.util.Map;
 @Controller
 @RequestMapping("/posts")
 public class PostController {
-
     @Autowired private PostInteractionService postInteractionService;
     @Autowired private PostCommandService postCommandService;
     @Autowired private PostQueryService postQueryService;

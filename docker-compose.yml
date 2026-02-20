@@ -31,12 +31,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    restart: always
+    restart: no
 
   db:
     image: mysql:8.4.0
     container_name: social-media-db
-    restart: always
+    restart: no
     environment:
       MYSQL_ROOT_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       MYSQL_DATABASE: social_media
@@ -61,7 +61,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: social-media-redis
-    restart: always
+    restart: no
     ports:
       - "6379:6379"
     environment:
