@@ -61,9 +61,9 @@ public class PostComment {
     private LocalDateTime updatedAt;
 
     // LikeComment
-    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude
-    private List<LikeComment> likedByUsers = new ArrayList<>();
+//    @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
+//    @ToString.Exclude
+//    private List<LikeComment> likedByUsers = new ArrayList<>();
 
     // Parent comment
     @ManyToOne(fetch = FetchType.LAZY)

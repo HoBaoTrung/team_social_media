@@ -82,28 +82,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                                     Pageable pageable);
 
 
-
-    @Query("""
-    SELECT p FROM Post p
-    WHERE p.isDeleted = FALSE
-      AND (
-           p.privacyLevel = 'PUBLIC'
-        OR (p.privacyLevel = 'FRIENDS' AND 
-            EXISTS (
-                SELECT f FROM Friendship f
-                WHERE f.status = 'ACCEPTED'
-                  AND (
-                        (f.requester.id = :currentUser AND f.addressee.id = p.user.id)
-                     OR (f.addressee.id = :currentUser AND f.requester.id = p.user.id)
-                  )
-            )
-        )
-        OR (p.user.id = :currentUser)
-      )
-    ORDER BY p.createdAt DESC
-    """)
-    Page<Post> findVisiblePosts(@Param("currentUser") Long currentUser, Pageable pageable);
-
     @Query("""
         SELECT p FROM Post p
         WHERE p.isDeleted = false

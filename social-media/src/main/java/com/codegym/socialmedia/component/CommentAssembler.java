@@ -7,6 +7,7 @@ import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Friendship;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.codegym.socialmedia.model.social_action.PostComment;
+import com.codegym.socialmedia.repository.comment.LikeCommentRepository;
 import com.codegym.socialmedia.service.friend_ship.FriendshipService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,7 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 public class CommentAssembler {
-
+    private final LikeCommentRepository likeCommentRepository;
     private final FriendshipService friendshipService;
     private final PrivacyPolicyResolver privacyPolicyResolver;
     record CommentFrame(PostComment comment, int depth, DisplayCommentDTO parentDto) {}
@@ -26,7 +27,7 @@ public class CommentAssembler {
      */
     public DisplayCommentDTO mapToDTO(PostComment root, User currentUser) {
         DisplayCommentDTO rootDto = buildDtoBase(root, currentUser);
-        int maxDepth = 3;
+        int maxDepth = 2;
         rootDto.setComment(renderContent(root.getContent(), root.getMentionedUsers()));
         rootDto.setReplies(new ArrayList<>());
 
@@ -107,7 +108,7 @@ public class CommentAssembler {
                     currentUser.isAdmin() ||
                             privacyPolicyResolver.canView(
                                     currentUser,
-                                    p.getUser(),
+                                    p,
                                     p.getPrivacyCommentLevel(),
                                     isFriend
                             )
@@ -128,12 +129,10 @@ public class CommentAssembler {
         dto.setParentCommentId(comment.getParent() != null ? comment.getParent().getId() : null);
 
         // Like
-        int likeCount = comment.getLikedByUsers() != null ? comment.getLikedByUsers().size() : 0;
+        int likeCount = likeCommentRepository.countByComment(comment);
         dto.setLikeCount(likeCount);
 
-        boolean likedByCurrentUser = currentUser != null && comment.getLikedByUsers() != null &&
-                comment.getLikedByUsers().stream()
-                        .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
+        boolean likedByCurrentUser = likeCommentRepository.existsByCommentAndUser(comment,currentUser);
         dto.setLikedByCurrentUser(likedByCurrentUser);
 
         // Mentions
@@ -161,8 +160,8 @@ public class CommentAssembler {
 
             List<PostComment> sorted = sortComments(replies);
 
-            // push ngược lại để giữ thứ tự
-            for (int i = sorted.size() - 1; i >= 0; i--) {
+            // push lại để giữ thứ tự
+            for (int i = 0; i < sorted.size() ; i++) {
                 PostComment child = sorted.get(i);
 
                 DisplayCommentDTO leaf = buildDtoBase(child, currentUser);

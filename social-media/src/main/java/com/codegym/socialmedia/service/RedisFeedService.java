@@ -23,7 +23,7 @@ public class RedisFeedService {
         redis.opsForZSet().add(key, postId.toString(), createdAt);
     }
 
-    public List<Long> getFeed(Long userId, int page, int size) {
+    public List<Long> getFeedIds(Long userId, int page, int size) {
         String key = String.format(FEED_KEY, userId);
         int start = page * size;
         int end = start + size - 1;
@@ -58,4 +58,11 @@ public class RedisFeedService {
 
         return count != null ? count : 0L;
     }
+
+    public void removeFromFeed(Long userId, Long postId) {
+        String key = String.format(FEED_KEY, userId);
+        redis.opsForZSet().remove(key, postId.toString());
+    }
+
+
 }
