@@ -28,7 +28,7 @@ public class PostInteractionServiceImpl implements PostInteractionService {
     public boolean toggleLike(Long postId, User user) {
         Post post = postRepository.findById(postId).orElseThrow();
 
-        LikePostId id = new LikePostId(postId, user.getId());
+        LikePostId id = new LikePostId(user.getId(), postId);
         boolean liked = postLikeRepository.existsById(id);
 
         if (liked) {

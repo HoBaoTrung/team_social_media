@@ -2,11 +2,14 @@ package com.codegym.socialmedia.service.notification;
 
 import com.codegym.socialmedia.component.NotificationMapper;
 import com.codegym.socialmedia.dto.NotificationDTO;
+import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Notification;
 import com.codegym.socialmedia.repository.notification.NotificationRepository;
 import com.codegym.socialmedia.service.user.UserService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,10 +25,8 @@ import java.util.Objects;
 public class NotificationService {
     private final NotificationRepository repo;
     private final NotificationMapper mapper;
-    private final SimpMessagingTemplate messaging;
-
-    @Autowired
-    private UserService userService;
+    private final EntityManager entityManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Notification notify(
@@ -34,17 +35,23 @@ public class NotificationService {
 
         if (Objects.equals(senderId, receiverId)) return null; // tránh tự notify chính mình
 
+        User sender = entityManager.getReference(User.class, senderId);
+        User receiver = entityManager.getReference(User.class, receiverId);
+
         Notification n = new Notification();
-        n.setSender(userService.getUserById(senderId));
-        n.setReceiver(userService.getUserById(receiverId));
+        n.setSender(sender);
+        n.setReceiver(receiver);
         n.setNotificationType(type);
         n.setReferenceType(refType);
         n.setReferenceId(refId);
         n = repo.save(n);
 
-        // Gửi notification thông thường
-        String userKey = n.getReceiver().getUsername();
-        messaging.convertAndSendToUser(userKey, "/queue/notifications", mapper.toDto(n));
+        eventPublisher.publishEvent(
+                new NotificationEvent(
+                        n.getId(),
+                        receiver.getUsername()
+                )
+        );
 
         return n;
     }
@@ -65,12 +72,12 @@ public class NotificationService {
 
     @Transactional
     public int markAllRead(Long receiverId) {
-        var page = repo.findByReceiverId(receiverId, PageRequest.of(0, 200)); // batch
-        int count = 0;
-        for (Notification n : page) {
-            if (!n.isRead()) { n.setRead(true); count++; }
-        }
-        return count;
+//        var page = repo.findByReceiverId(receiverId, PageRequest.of(0, 200)); // batch
+//        int count = 0;
+//        for (Notification n : page) {
+//            if (!n.isRead()) { n.setRead(true); count++; }
+//        }
+        return repo.markAllRead(receiverId);
     }
 
     public long countUnread(Long receiverId) {

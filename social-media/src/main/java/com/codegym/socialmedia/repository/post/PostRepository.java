@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.repository.post;
 
+import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Post;
 import org.springframework.data.domain.Page;
@@ -83,20 +84,63 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
 
     @Query("""
-        SELECT p FROM Post p
-        WHERE p.isDeleted = false
-          AND (
-               p.privacyLevel = 'PUBLIC'
-            OR (p.privacyLevel = 'FRIENDS' AND p.user.id IN :friendIds)
-            OR p.user.id = :currentUser
-          )
-        ORDER BY p.createdAt DESC
-        """)
-    Page<Post> findVisiblePostsOptimized(
-            @Param("currentUser") Long currentUser,
+    SELECT p FROM Post p
+    WHERE p.isDeleted = false
+    AND p.id IN :ids
+    AND (
+        p.privacyLevel = 'PUBLIC'
+        OR p.user.id = :viewerId
+        OR (
+            p.privacyLevel = 'FRIENDS'
+            AND p.user.id IN :friendIds
+        )
+        OR (
+            p.privacyLevel = 'SPECIFIC_FRIENDS'
+            AND EXISTS (
+                SELECT 1 FROM PostPrivacyUser pu
+                WHERE pu.post.id = p.id
+                AND pu.user.id = :viewerId
+                AND pu.accept = true
+            )
+        )
+        OR (
+            p.privacyLevel = 'FRIEND_EXCEPT'
+            AND p.user.id IN :friendIds
+            AND NOT EXISTS (
+                SELECT 1 FROM PostPrivacyUser pu
+                WHERE pu.post.id = p.id
+                AND pu.user.id = :viewerId
+                AND pu.accept = false
+            )
+        )
+    )
+""")
+    List<Post> findVisiblePostsByIds(
+            @Param("viewerId") Long viewerId,
+            @Param("ids") List<Long> ids,
+            @Param("friendIds") List<Long> friendIds
+    );
+
+    @Query("""
+    SELECT p FROM Post p
+    WHERE p.isDeleted = false
+    AND (
+        p.user.id = :viewerId
+        OR p.privacyLevel = 'PUBLIC'
+        OR (
+            p.privacyLevel = 'FRIENDS'
+            AND p.user.id IN :friendIds
+        )
+    )
+    ORDER BY p.createdAt DESC
+""")
+    List<Post> findWarmUpCandidates(
+            @Param("viewerId") Long viewerId,
             @Param("friendIds") List<Long> friendIds,
             Pageable pageable
     );
+
+    List<Post> findTop100ByPrivacyLevelOrderByCreatedAtDesc(PrivacyLevel privacyLevel);
 
     @Query(""" 
                 SELECT p FROM Post p WHERE p.isDeleted = false and p.id IN :postIds

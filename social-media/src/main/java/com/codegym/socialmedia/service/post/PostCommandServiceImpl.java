@@ -26,7 +26,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Transactional
 public class PostCommandServiceImpl implements PostCommandService {
-    private final FriendshipRepository friendshipRepository;
+
     private final PostRepository postRepository;
     private final ImageUploader imageUploader;
     private final ObjectMapper objectMapper;
@@ -47,7 +47,7 @@ public class PostCommandServiceImpl implements PostCommandService {
 
         updatePrivacyUsers(post, dto);
 
-        fanOutPost(post);
+        redisFeedService.fanOutPost(post);
 
         return post;
     }
@@ -64,7 +64,7 @@ public class PostCommandServiceImpl implements PostCommandService {
         post.setImageUrls(uploadUpdatedImages(dto));
 
         updatePrivacyUsers(post, dto);
-        fanOutPost(post);
+        redisFeedService.fanOutPost(post);
         return post;
     }
 
@@ -116,67 +116,10 @@ public class PostCommandServiceImpl implements PostCommandService {
                 .orElseThrow(() -> new RuntimeException("Post not found"));
 
         post.setDeleted(true);
-        removePostFromAllFeeds(post);
         postPrivacyUserRepository.deleteByPostId(post.getId());
 
     }
 
-    private void fanOutPost(Post post) {
-
-        Long ownerId = post.getUser().getId();
-        long score = post.getCreatedAt().toEpochSecond(ZoneOffset.UTC);
-
-        List<Long> friendIds = friendshipRepository
-                .findAllFriendshipsOfUser(ownerId)
-                .stream()
-                .map(f -> f.getRequester().getId().equals(ownerId) ? f.getAddressee().getId() : f.getRequester().getId())
-                .toList();
-
-        // Owner luôn thấy post của mình
-        redisFeedService.pushToFeed(ownerId, post.getId(), score);
-
-        switch (post.getPrivacyLevel()) {
-
-            case PUBLIC, FRIENDS -> {
-                friendIds.forEach(friendId ->
-                        redisFeedService.pushToFeed(friendId, post.getId(), score));
-            }
-
-            case SPECIFIC_FRIENDS -> {
-                List<Long> allowedIds =
-                        postPrivacyUserRepository.findAllowedUserIds(post.getId());
-
-                allowedIds.forEach(userId ->
-                        redisFeedService.pushToFeed(userId, post.getId(), score));
-            }
-
-            case FRIEND_EXCEPT -> {
-                List<Long> excludedIds =
-                        postPrivacyUserRepository.findExcludedUserIds(post.getId());
-
-                friendIds.stream()
-                        .filter(id -> !excludedIds.contains(id))
-                        .forEach(userId ->
-                                redisFeedService.pushToFeed(userId, post.getId(), score));
-            }
-        }
-    }
-
-    private void removePostFromAllFeeds(Post post) {
-
-        Long ownerId = post.getUser().getId();
-
-        List<Long> friendIds = friendshipRepository
-                .findAllFriendshipsOfUser(ownerId)
-                .stream()
-                .map(f -> f.getRequester().getId().equals(ownerId) ? f.getAddressee().getId() : f.getRequester().getId())
-                .toList();
-
-        redisFeedService.removeFromFeed(ownerId, post.getId());
-
-        friendIds.forEach(friendId ->
-                redisFeedService.removeFromFeed(friendId, post.getId()));
-    }
 
     // helpers
     private String uploadImages(List<MultipartFile> images) {

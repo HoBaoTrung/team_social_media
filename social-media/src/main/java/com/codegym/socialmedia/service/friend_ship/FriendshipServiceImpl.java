@@ -171,6 +171,7 @@ public class FriendshipServiceImpl implements FriendshipService {
                 .orElse(null);
     }
 
+    @Override
     public Set<Long> findFriendIdsOfUser(Long userId) {
         List<Friendship> friendships = friendshipRepository.findAllFriendshipsOfUser(userId);
         return friendships.stream()

@@ -3,6 +3,7 @@ import {formatTimeAgo} from './timeUtils.js';
 // Posts JavaScript
 class PostManager {
     constructor() {
+        this.lastScore = null;
         this.currentPage = 0;
         this.isLoading = false;
         this.hasMorePosts = true;
@@ -190,7 +191,10 @@ class PostManager {
         this.isLoading = true;
         this.showLoading(true);
 
-        let controllerURL = `/posts/api/feed?page=${this.currentPage}&size=10`;
+        let controllerURL = `/posts/api/feed?size=10`;
+        if (this.lastScore) {
+            controllerURL += `&lastScore=${this.lastScore}`;
+        }
         const urlParams = new URLSearchParams(window.location.search);
         controllerURL += '&postID=' + (urlParams.get('postID') ? parseInt(urlParams.get('postID')) : -1);
 
@@ -210,32 +214,22 @@ class PostManager {
                 }
             });
 
-            if ('pageable' in data && Array.isArray(data.content)) {
-                if (data.content && data.content.length > 0) {
-                    data.content.forEach(post => {
-                        this.appendPost(post);
-                    });
+            if (Array.isArray(data.posts) && data.posts.length > 0) {
 
-                    this.currentPage++;
-                    this.hasMorePosts = !data.last;
-                } else {
-                    this.hasMorePosts = false;
-                    if (this.currentPage === 0) {
-                        const noPostsEl = document.getElementById('profile-no-posts');
-                        if (noPostsEl) {
-                            noPostsEl.style.display = 'block';
-                        }
-                    }
-                    this.showNoMorePosts();
-                }
-            } else {
-                this.appendPost(data);
-                this.hasMorePosts = false;
-                requestAnimationFrame(() => {
-                    this.goToComment(urlParams.get('commentID'), data.id);
+                data.posts.forEach(post => {
+                    this.appendPost(post);
                 });
-            }
 
+                this.currentPage++;
+                this.lastScore = data.nextCursor;
+
+                // Nếu ít hơn size → hết bài
+                this.hasMorePosts = data.posts.length === 10;
+
+            } else {
+                this.hasMorePosts = false;
+                this.showNoMorePosts();
+            }
 
         } catch (error) {
             console.error('Error loading posts:', error);

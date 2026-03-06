@@ -1,5 +1,6 @@
 package com.codegym.socialmedia.controller;
 
+import com.codegym.socialmedia.dto.post.FeedResponse;
 import com.codegym.socialmedia.dto.post.PostCreateDto;
 import com.codegym.socialmedia.dto.post.PostDisplayDto;
 import com.codegym.socialmedia.dto.post.PostUpdateDto;
@@ -209,7 +210,7 @@ public class PostController {
     public ResponseEntity<?> getNewsFeed(
             @RequestParam(value = "postID", defaultValue = "-1") long postID,
             @RequestParam(value = "commentID", defaultValue = "-1") long commentID,
-            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "lastScore", required = false) Long lastScore,
             @RequestParam(value = "size", defaultValue = "10") int size) {
 
         if (commentID != -1) {
@@ -222,14 +223,12 @@ public class PostController {
             return ResponseEntity.status(401).build();
         }
         if (postID == -1 && commentID == -1) {
-            Pageable pageable = PageRequest.of(page, size);
-            Page<PostDisplayDto> posts = postFeedService.getFeed(currentUser, pageable);
-
+            FeedResponse posts = postFeedService.getFeed(currentUser,lastScore,size);
             return ResponseEntity.ok(posts);
         }
 
         PostDisplayDto postDto = postQueryService.getPostById(postID, currentUser);
-        return ResponseEntity.ok(postDto);
+        return ResponseEntity.ok(new FeedResponse(List.of(postDto), 0L));
     }
 
     @GetMapping("/api/user/{username}")
@@ -255,8 +254,8 @@ public class PostController {
         } else {
             posts = postQueryService.getPublicPostsByUser(targetUser, currentUser, pageable);
         }
-
-        return ResponseEntity.ok(posts);
+        return ResponseEntity.ok(new FeedResponse(posts.getContent(), 0L));
+//        return ResponseEntity.ok(posts);
 
     }
 
