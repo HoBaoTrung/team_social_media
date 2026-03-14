@@ -1,18 +1,17 @@
 package com.codegym.socialmedia.service.notification;
 
-import com.codegym.socialmedia.component.NotificationMapper;
 import com.codegym.socialmedia.repository.notification.NotificationRepository;
+import com.codegym.socialmedia.service.notification.handler.NotificationHandler;
+import com.codegym.socialmedia.service.notification.handler.NotificationHandlerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -20,9 +19,9 @@ public class NotificationRedisConsumer {
 
     private final StringRedisTemplate redisTemplate;
     private final NotificationRepository notificationRepository;
-    private final NotificationMapper mapper;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationHandlerFactory handlerFactory;
     private final ObjectMapper objectMapper;
+
     private static final String QUEUE_KEY = "notification:queue";
 
     @PostConstruct
@@ -36,8 +35,10 @@ public class NotificationRedisConsumer {
 
         while (true) {
             try {
+
                 String json = redisTemplate.opsForList()
                         .rightPop(QUEUE_KEY, Duration.ofSeconds(5));
+
                 if (json != null) {
 
                     NotificationEvent event =
@@ -45,6 +46,7 @@ public class NotificationRedisConsumer {
 
                     process(event);
                 }
+
             } catch (Exception e) {
                 log.error("Error consuming notification queue", e);
             }
@@ -56,13 +58,14 @@ public class NotificationRedisConsumer {
         notificationRepository.findById(event.notificationId())
                 .ifPresent(notification -> {
 
-                    messagingTemplate.convertAndSendToUser(
-                            event.receiverUsername(),
-                            "/queue/notifications",
-                            mapper.toDto(notification)
-                    );
+                    NotificationHandler handler =
+                            handlerFactory.getHandler(notification.getNotificationType());
 
-                    log.info("Notification sent to {}", event.receiverUsername());
+                    if (handler != null) {
+                        handler.handle(notification);
+                    }
+
+                    log.info("Notification processed for {}", event.receiverUsername());
                 });
     }
 }

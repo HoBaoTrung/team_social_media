@@ -47,7 +47,7 @@ public class PostInteractionServiceImpl implements PostInteractionService {
         notificationService.notify(
                 user.getId(), post.getUser().getId(),
                 Notification.NotificationType.LIKE_POST,
-                Notification.ReferenceType.POST,
+
                 postId
         );
 

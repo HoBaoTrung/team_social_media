@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 
 @Component
 public class NotificationMapper {
-    public NotificationDTO toDto(Notification n) {
+    public NotificationDTO toDto(Notification n, String referenceType ) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         String formattedDate = n.getCreatedAt().format(formatter);
         User s = n.getSender();
@@ -19,7 +19,7 @@ public class NotificationMapper {
                 n.getNotificationType().name(),
                 formattedDate,
                 n.getReferenceId(),
-                n.getReferenceType().name(), isRead,
+                referenceType, isRead,
                 new NotificationDTO.SenderDTO(s.getId(), s.getUsername(), s.getProfilePicture(),s.getFullName())
         );
     }

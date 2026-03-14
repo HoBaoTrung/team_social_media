@@ -62,7 +62,7 @@ public class FriendshipServiceImpl implements FriendshipService {
             notificationService.notify(
                     currentUser.getId(), user.getId(),
                     Notification.NotificationType.FRIEND_REQUEST,
-                    Notification.ReferenceType.FRIENDSHIP, user.getId());
+                    user.getId());
             return true;
         } catch (Exception e) {
             e.printStackTrace();

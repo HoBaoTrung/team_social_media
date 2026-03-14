@@ -4,7 +4,6 @@ import com.codegym.socialmedia.model.account.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -30,9 +29,6 @@ public class Notification {
     @Column(name = "notification_type", length = 50) // Thêm length
     private NotificationType notificationType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "reference_type", length = 50) // Thêm length
-    private ReferenceType referenceType;
 
     private Long referenceId;
 
@@ -40,8 +36,6 @@ public class Notification {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-    public enum ReferenceType { POST, COMMENT, FRIENDSHIP }
 
     public enum NotificationType {
         LIKE_POST,

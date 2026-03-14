@@ -69,7 +69,7 @@ public class PostCommentServiceImpl implements PostCommentService {
                         user.getId(),
                         postOwner.getId(),
                         Notification.NotificationType.COMMENT_POST,
-                        Notification.ReferenceType.COMMENT,
+
                         savedComment.getId()
                 );
             }
@@ -106,7 +106,7 @@ public class PostCommentServiceImpl implements PostCommentService {
                         currentUser.getId(),
                         parent.getUser().getId(),
                         Notification.NotificationType.REPLY_COMMENT,
-                        Notification.ReferenceType.COMMENT,
+
                         savedReply.getId()
                 );
             }
@@ -138,7 +138,7 @@ public class PostCommentServiceImpl implements PostCommentService {
                         author.getId(),
                         mentionedUserId,
                         Notification.NotificationType.MENTION_COMMENT,
-                        Notification.ReferenceType.COMMENT,
+
                         comment.getId()
                 );
             }
@@ -250,7 +250,7 @@ public class PostCommentServiceImpl implements PostCommentService {
             likeCommentRepository.save(like);
             likedByCurrentUser = true;
             notificationService.notify(currentUser.getId(), comment.getUser().getId(),
-                    Notification.NotificationType.LIKE_COMMENT, Notification.ReferenceType.COMMENT, commentId);
+                    Notification.NotificationType.LIKE_COMMENT, commentId);
         }
 
         postMessage.notifyCommentLikeChanged(
