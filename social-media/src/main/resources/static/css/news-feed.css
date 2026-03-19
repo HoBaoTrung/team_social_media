@@ -1,3 +1,6 @@
+body {
+    overflow-y: hidden;
+}
 
 .friend-item-enhanced {
     display: flex;
@@ -115,10 +118,19 @@
     margin: 16px 0;
 }
 .main-container {
-    display: grid;
+    /*display: grid;*/
     grid-template-columns: 1fr 2fr 1fr;
     gap: 1.5rem;
     padding: 2rem;
+    display: flex;
+    /*gap: 20px;*/
+    height: calc(100vh - 60px); /* full chiều cao trừ header */
+    margin-top: 0;              /* bỏ khoảng cách thừa */
+    /*padding-top: 0;*/
+}
+
+.main-container > div {
+    height: 85vh;
 }
 
 .sidebar, .feed, .post-creator, .post {
@@ -439,13 +451,7 @@ body {
     color: var(--text-primary);
 }
 
-.main-container {
-    display: flex;
-    gap: 20px;
-    height: calc(100vh - 60px); /* full chiều cao trừ header */
-    margin-top: 0;              /* bỏ khoảng cách thừa */
-    padding-top: 0;             /* bỏ padding trên */
-}
+
 
 .nav-sidebar {
     width: 280px;
