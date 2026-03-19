@@ -15,37 +15,48 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.sql.DataSource;
 import java.io.IOException;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+
     @Autowired
     private CustomUserDetailsService userDetailsService;
+
     @Autowired
     private CustomOAuth2UserService oauth2UserService;
+
     @Autowired
     private CustomLogoutHandler customLogoutHandler;
+
     @Autowired
     private IUserRepository userRepository;
 
-    @Autowired private UserSessionService userSessionService;
+    @Autowired
+    private UserSessionService userSessionService;
 
     @Autowired
     private CustomAuthFailureHandler customAuthFailureHandler;
@@ -57,7 +68,7 @@ public class SecurityConfig {
     private JwtUtil jwtUtil;
 
     @Autowired
-    private DataSource dataSource; // Cần thiết cho Remember Me
+    private DataSource dataSource;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -65,62 +76,95 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    @Bean
     public PersistentTokenRepository persistentTokenRepository() {
         JdbcTokenRepositoryImpl repo = new JdbcTokenRepositoryImpl();
-//        repo.setCreateTableOnStartup(true);
         repo.setDataSource(dataSource);
         return repo;
     }
 
+    // Chain 1: Dành riêng cho API (stateless, JWT, Angular)
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/**")
+                .securityMatcher("/api/**")  // Chỉ áp dụng cho mọi request bắt đầu bằng /api/
 
-                // --- Chính sách header (cho ảnh Google, Facebook, Cloudinary,...) ---
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()  // login, register, refresh token,...
+                        .anyRequest().authenticated()
+                )
+
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                .csrf(csrf -> csrf.disable())
+
+                // Thêm JWT filter
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // Trả về JSON khi unauthorized (không redirect về login)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, authEx) -> {
+                            res.setStatus(401);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + authEx.getMessage() + "\"}");
+                        })
+                );
+
+        return http.build();
+    }
+
+    // Chain 2: Dành cho web (form login, OAuth2, remember-me, session-based)
+    @Bean
+    public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/**")  // Áp dụng cho tất cả request còn lại (không thuộc /api/)
+
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Headers CSP
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("img-src 'self' https://lh3.googleusercontent.com https://*.fbcdn.net https://res.cloudinary.com https://graph.facebook.com https://i.imgur.com https://secure.gravatar.com data: blob:;")
                         )
                 )
 
-                // --- Phân quyền ---
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**", "/api/debug/**", "/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
-                // --- Form login ---
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
-                        .successHandler((request, response, authentication) -> {
-                            handleLoginSuccess(request,response, authentication);
-                        })
+                        .successHandler(this::handleLoginSuccess)
                         .failureHandler(customAuthFailureHandler)
                         .permitAll()
                 )
 
-                // --- OAuth2 login (Google, Facebook) ---
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
                         .userInfoEndpoint(userInfo -> userInfo.userService(oauth2UserService))
-                        .successHandler((request, response, authentication) -> {
-                            handleLoginSuccess(request,response, authentication);
-                        })
+                        .successHandler(this::handleLoginSuccess)
                         .failureHandler(customAuthFailureHandler)
                 )
 
-                // --- Remember Me ---
                 .rememberMe(remember -> remember
                         .tokenRepository(persistentTokenRepository())
-                        .tokenValiditySeconds(7 * 24 * 60 * 60) // 7 ngày
+                        .tokenValiditySeconds(7 * 24 * 60 * 60)
                         .userDetailsService(userDetailsService)
                 )
 
-                // --- Logout ---
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .addLogoutHandler(customLogoutHandler)
@@ -130,21 +174,29 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
-                // --- CSRF ---
-                .csrf(csrf -> csrf.disable())
-
-                // --- Session ---
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 );
 
-        // --- Thêm JWT Filter trước UsernamePasswordAuthenticationFilter ---
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
-    private void handleLoginSuccess(HttpServletRequest request,HttpServletResponse response, Authentication authentication) throws IOException {
+    // CORS configuration chung cho cả hai chain
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:4200"));  // thêm domain production sau này
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    private void handleLoginSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         Object principal = authentication.getPrincipal();
         String username;
 
@@ -160,8 +212,8 @@ public class SecurityConfig {
         if (user == null) {
             throw new IllegalStateException("User not found: " + username);
         }
-        userSessionService.createSession(user, request, response);
 
+        userSessionService.createSession(user, request, response);
         response.sendRedirect("/news-feed");
     }
 }
