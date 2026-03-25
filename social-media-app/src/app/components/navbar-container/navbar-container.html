@@ -1,0 +1,20 @@
+<!-- navbar-container.component.html -->
+<div class="d-flex align-items-center gap-3">
+
+  <!-- Menu Dropdown -->
+  <app-menu></app-menu>
+
+  <!-- Messages -->
+  <app-messages-dropdown></app-messages-dropdown>
+
+  <!-- Notifications -->
+  <app-notifications-dropdown></app-notifications-dropdown>
+
+  <!-- Authenticated: User Dropdown -->
+  @if (isAuthenticated | async) {
+    <app-user-dropdown></app-user-dropdown>
+  } @else {
+    <app-login-icon></app-login-icon>
+  }
+
+</div>

@@ -76,13 +76,10 @@ public class NotificationService {
         for (Notification notification : notifications.getContent()) {
 
             Notification.NotificationType type = notification.getNotificationType();
-            System.out.println("Type: " + type);
 
             NotificationHandler handler = notificationHandlerFactory.getHandler(type);
-            System.out.println("Handler: " + handler);
 
             String referenceType = handler.getReferenceType();
-            System.out.println("ReferenceType: " + referenceType);
 
             NotificationDTO dto = mapper.toDto(notification, referenceType);
 

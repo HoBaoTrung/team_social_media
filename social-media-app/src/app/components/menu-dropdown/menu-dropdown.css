@@ -1,0 +1,11 @@
+.menu-dropdown {
+  position: relative; 
+}
+
+
+.parent {
+  position: absolute;
+  top: 100%;  
+  left: -10rem;
+  width: 400px;
+}

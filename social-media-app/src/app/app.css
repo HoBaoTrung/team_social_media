@@ -1,0 +1,16 @@
+login-register {
+    display: flex;
+    justify-content: center;
+    /* căn giữa ngang */
+    align-items: center;
+    /* căn giữa dọc */
+    min-height: 100vh;
+    /* chiếm ít nhất toàn bộ chiều cao màn hình */
+    width: 100vw;
+    /* chiếm toàn bộ chiều rộng */
+    margin: 0;
+    padding: 0;
+    /* Nếu muốn background cho toàn màn hình */
+    background: #f0f0f0;
+}
+

@@ -1,0 +1,12 @@
+<ul class="list-menu">
+    @for (item of menuItems; track item.label) {
+    <li>
+        <a [routerLink]="item.link" class="nav-item body-item" (click)="item.developing 
+            ? alertDeveloping.preventDeveloping($event) 
+            : ''">
+            <fa-icon [icon]="item.icon"></fa-icon>
+            <span>{{ item.label }}</span>
+        </a>
+    </li>
+    }
+</ul>

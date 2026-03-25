@@ -8,7 +8,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,15 +20,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     @Autowired
     private JwtUtil jwtUtil;
 
     @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+    private CustomUserDetailsService userDetailsService;
 
     @Autowired
     private UserSessionService userSessionService;
@@ -39,57 +46,142 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String jwtToken = getCookieValue(request, "jwt_token");
-        String refreshToken = getCookieValue(request, "refresh_token");
-
         try {
-            if (jwtToken != null) {
-                if (jwtUtil.validateToken(jwtToken)) {
-                    if (tokenBlacklistService.isTokenBlacklisted(jwtToken)) {
-                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has been logged out");
-                        return;
-                    }
+            String accessToken = extractAccessToken(request);
+            String refreshToken = extractRefreshToken(request);
 
-                    // ✅ Token còn hạn → xác thực bình thường
-                    authenticateUser(jwtToken, request);
-                    userSessionService.updateLastActivity(refreshToken);
-                } else if (jwtUtil.isTokenExpired(jwtToken)) {
-                    // ⚠️ Access token hết hạn → thử refresh
-                    String newAccessToken = userSessionService.refreshAccessTokenIfNeeded(refreshToken, response);
-                    if (newAccessToken != null) {
-                        authenticateUser(newAccessToken, request);
-                    } else {
-                        // ❌ Refresh token cũng hết hạn → buộc đăng nhập lại
-                        response.sendRedirect("/login?expired");
-                        return;
-                    }
+            if (accessToken != null) {
+
+                if (isValidToken(accessToken)) {
+                    handleValidToken(accessToken, refreshToken, request);
+                } else if (jwtUtil.isTokenExpired(accessToken)) {
+                    handleExpiredToken(refreshToken, request, response);
+                } else {
+                    handleInvalidToken(request, response, "Invalid token");
+                    return;
                 }
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
-            response.sendRedirect("/login?error=invalid");
+            logger.error("Authentication error occurred", e);
+            handleInvalidToken(request, response, "Authentication error");
             return;
         }
 
         filterChain.doFilter(request, response);
     }
 
+
+    private void handleValidToken(String token, String refreshToken, HttpServletRequest request) {
+
+        if (tokenBlacklistService.isTokenBlacklisted(token)) {
+            logger.warn("Blacklisted token attempted to be used");
+            throw new RuntimeException("Token is blacklisted");
+        }
+
+        authenticateUser(token, request);
+
+        // update session if refresh token exists
+        if (refreshToken != null) {
+            userSessionService.updateLastActivity(refreshToken);
+        }
+    }
+
+    private void handleExpiredToken(String refreshToken,
+                                    HttpServletRequest request,
+                                    HttpServletResponse response) throws IOException {
+
+        if (refreshToken == null) {
+            handleUnauthorized(request, response, "Token expired");
+            return;
+        }
+
+        String newAccessToken = userSessionService.refreshAccessTokenIfNeeded(refreshToken, response);
+
+        if (newAccessToken != null) {
+            authenticateUser(newAccessToken, request);
+        } else {
+            handleUnauthorized(request, response, "Session expired");
+        }
+    }
+
+    private void handleInvalidToken(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    String message) throws IOException {
+        handleUnauthorized(request, response, message);
+    }
+
+    // =========================
+    // 🔑 AUTHENTICATION CORE
+    // =========================
+
     private void authenticateUser(String token, HttpServletRequest request) {
         String username = jwtUtil.extractUsername(token);
+
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
             UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
     }
 
+    private boolean isValidToken(String token) {
+        return jwtUtil.validateToken(token);
+    }
+
+
+
+    private String extractAccessToken(HttpServletRequest request) {
+
+        // 1. Header (Angular)
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        // 2. Cookie (Thymeleaf)
+        return getCookieValue(request, "jwt_token");
+    }
+
+    private String extractRefreshToken(HttpServletRequest request) {
+        return getCookieValue(request, "refresh_token");
+    }
+
     private String getCookieValue(HttpServletRequest request, String name) {
         if (request.getCookies() == null) return null;
+
         for (Cookie cookie : request.getCookies()) {
-            if (cookie.getName().equals(name)) return cookie.getValue();
+            if (cookie.getName().equals(name)) {
+                return cookie.getValue();
+            }
         }
         return null;
+    }
+
+
+    private void handleUnauthorized(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    String message) throws IOException {
+
+        if (isApiRequest(request)) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, message);
+        } else {
+            String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8);
+            response.sendRedirect("/login?error=" + encodedMessage);
+        }
+    }
+
+    private boolean isApiRequest(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/api");
     }
 }

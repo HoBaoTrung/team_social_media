@@ -1,0 +1,29 @@
+<!-- user-dropdown.component.html -->
+<div class="nav-item dropdown">
+  <a class="nav-link dropdown-toggle p-0 d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+    <img [src]="(user$ | async)?.avatarUrl || '/images/default-avatar.jpg'"
+         alt="Avatar" class="rounded-circle nav-icon-wrapper"/>
+  </a>
+
+  <ul class="dropdown-menu dropdown-menu-end" style="width: 350px;">
+    <li>
+      <a class="dropdown-item d-flex align-items-center" [routerLink]="['/profile', (user$ | async)?.username]">
+        <img [src]="(user$ | async)?.avatarUrl || '/images/default-avatar.jpg'" alt="Avatar" class="rounded-circle nav-icon-wrapper"/>
+        <span class="ms-2">{{ (user$ | async)?.fullName }}</span>
+      </a>
+    </li>
+    <li><a class="dropdown-item" routerLink="/setting"><fa-icon [icon]="faCog" class="icon"></fa-icon> Cài đặt</a></li>
+
+    @if (isAdmin) {
+      <li><a class="dropdown-item" routerLink="/admin/dashboard"><fa-icon [icon]="faUserShield" class="icon"></fa-icon> Trang admin</a></li>
+    }
+
+    <hr class="dropdown-divider">
+
+    <li>
+      <button class="dropdown-item text-danger" (click)="authService.logout()">
+        <fa-icon [icon]="faSignOutAlt" class="icon"></fa-icon> Đăng xuất
+      </button>
+    </li>
+  </ul>
+</div>

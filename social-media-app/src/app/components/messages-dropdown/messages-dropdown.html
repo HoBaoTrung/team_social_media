@@ -1,0 +1,48 @@
+<div class="message-dropdown">
+
+  <!-- ICON -->
+  <div appTooltip="Tin nhắn" #trigger class="nav-icon-wrapper position-relative" (click)="toggleDropdown()" style="cursor: pointer;">
+    <fa-icon [icon]="faCommentDots" class="fa-lg nav-icon"></fa-icon>
+
+    @if (unreadCount > 0) {
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+      style="font-size: 0.7rem;">
+      {{ unreadCount }}
+    </span>
+    }
+  </div>
+
+  <!-- DROPDOWN -->
+  <div #dropdown class="message-list-dropdown" [class.show]="showMessageDropdown">
+
+    <div class="dropdown-header">
+      <h5 class="dropdown-title">Tin nhắn</h5>
+    </div>
+
+    <div class="conversation-list">
+
+      @if (isLoading) {
+      <div class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <div>Đang tải...</div>
+      </div>
+      } @else {
+
+      <!-- Demo data -->
+      @if (conversations.length === 0) {
+      <div class="empty-state">Không có tin nhắn</div>
+      } @else {
+      @for (item of conversations; track item.id) {
+      <div class="conversation-item">
+        <strong>{{ item.name }}</strong>
+        <p>{{ item.lastMessage }}</p>
+      </div>
+      }
+      }
+
+      }
+
+    </div>
+
+  </div>
+</div>

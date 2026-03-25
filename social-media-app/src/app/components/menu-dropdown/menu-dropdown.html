@@ -1,0 +1,19 @@
+<div class="menu-dropdown">
+
+  <!-- BUTTON -->
+  <button class="nav-icon-wrapper position-relative no-caret" type="button" (click)="toggleMenu()" appTooltip="Menu">
+    <div class="d-flex align-items-center text-light">
+      <fa-icon [icon]="faBars" class="menu-icon"></fa-icon>
+    </div>
+  </button>
+
+  <!-- DROPDOWN -->
+  @if (showMenuDropdown) {
+  <div class="parent">
+    <app-menu-content></app-menu-content>
+  </div>
+  }
+
+
+
+</div>

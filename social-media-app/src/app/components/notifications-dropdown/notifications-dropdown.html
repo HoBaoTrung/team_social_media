@@ -1,0 +1,75 @@
+
+<div class="notification-wrapper notification-dropdown">
+  <button #trigger class="nav-icon-wrapper position-relative" (click)="toggleDropdown()"
+    [attr.aria-expanded]="showNotificationDropdown">
+    <fa-icon [icon]="faBell" size="lg" class="nav-icon"></fa-icon>
+
+    @if (unreadCount > 0) {
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+      {{ unreadCount > 99 ? '99+' : unreadCount }}
+    </span>
+    }
+  </button>
+
+  @if (showNotificationDropdown) {
+  <div #dropdown class="dropdown-menu dropdown-menu-end show shadow-lg p-0" style="width: 390px;">
+
+    <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-semibold">Thông báo</h6>
+      @if (unreadCount > 0) {
+      <button class="btn btn-sm btn-outline-primary" (click)="markAllAsRead()">Đánh dấu tất cả đã đọc</button>
+      }
+    </div>
+
+    <!-- Virtual Scroll -->
+    <cdk-virtual-scroll-viewport #viewport itemSize="92" minBufferPx="200" maxBufferPx="400"
+      class="notification-viewport" style="height: 420px;">
+
+      <div *cdkVirtualFor="let notif of notifications(); trackBy: trackById" class="notification-item"
+        [class.bg-light-subtle]="!notif.isRead" (click)="markAsRead(notif)">
+
+        <div class="d-flex align-items-start position-relative w-100">
+
+          <!-- Avatar -->
+          <img [src]="notif.sender.avatarUrl || '/assets/images/default-avatar.jpg'"
+            class="rounded-circle me-3 flex-shrink-0" width="44" height="44" alt="avatar">
+
+          <!-- Nội dung chính -->
+          <div class="flex-grow-1">
+            <strong class="me-2">{{ notif.sender.fullName || notif.sender.username }}</strong>
+            <div>
+
+              <small class="text-muted">{{ notif.createdAt }}</small>
+            </div>
+
+            <div class="mt-1 small">
+              @switch (notif.notificationType) {
+              @case ('LIKE') { đã thích bài viết của bạn }
+              @case ('COMMENT') { đã bình luận về bài viết của bạn }
+              @case ('FOLLOW') { đã theo dõi bạn }
+              @default { {{ notif.notificationType }} }
+              }
+            </div>
+          </div>
+
+    
+          @if (!notif.isRead) {
+          <span class="badge-new">Mới</span>
+          }
+
+        </div>
+      </div>
+    </cdk-virtual-scroll-viewport>
+
+    @if (isLoadingMore) {
+    <div class="text-center py-2 border-top">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+    </div>
+    }
+
+    <div class="p-3 text-center border-top bg-light">
+      <a routerLink="/notifications" class="text-primary text-decoration-none small">Xem tất cả thông báo →</a>
+    </div>
+  </div>
+  }
+</div>

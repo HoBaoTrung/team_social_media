@@ -1,0 +1,459 @@
+.navbar {
+    background: #f7f8fd;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1000;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px; /* Giảm padding trên mobile */
+}
+
+/* Navigation Center */
+.navigation-center {
+    gap: 20px; /* Giảm gap trên mobile */
+    padding: 8px 15px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Navbar Brand (Logo) */
+.navbar-brand {
+    font-weight: bold;
+    color: white;
+}
+
+.navbar-brand:hover {
+    color: #ddd;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #667eea;
+}
+
+/* Navigation Links */
+.navigation-center a,
+.navigation-right a {
+    font-size: 14px;
+    border-radius: 5px;
+    text-decoration: none;
+    padding: 8px 16px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    margin: 0 8px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    transition: transform 0.3s ease;
+    height: 40px;
+}
+
+.navigation-center a:hover,
+.navigation-right a:hover {
+    background: #ff6ecf;
+    transform: scale(1.1);
+}
+
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.body-item{
+    padding: 10px;
+    margin-bottom: 5px;
+}
+
+.nav-item:hover {
+    background-color: #eddddd;
+    text-decoration: none;
+    color: black;
+}
+
+.nav-item i {
+    margin-right: 10px;
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+/* Search Input */
+.form-control-sm {
+    padding: 5px;
+    width: 250px;
+    font-size: 14px;
+}
+
+/* Dropdown Header */
+.dropdown-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e4e6ea;
+}
+
+.dropdown-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #050505;
+}
+
+/* Conversation List */
+.conversation-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.conversation-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.conversation-item:hover {
+    background-color: #f2f2f2;
+}
+
+.conversation-item:last-child {
+    border-bottom: none;
+}
+
+.conversation-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin-right: 12px;
+    object-fit: cover;
+    position: relative;
+}
+
+.conversation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversation-preview {
+    font-size: 13px;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.online-dot {
+    position: absolute;
+    top: -5px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    background: #42b883;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+/* User Avatar */
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.user-avatar:hover {
+    transform: scale(1.05);
+}
+
+/* Dropdown Avatar */
+.dropdown-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #ddd;
+}
+
+/* Remove default dropdown toggle styles */
+.nav-item .dropdown-toggle {
+    border: none !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+.nav-item .dropdown-toggle:focus {
+    box-shadow: none !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 991px) {
+    .navigation-center {
+        display: none; /* Ẩn navigation-center trên tablet/mobile */
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 0 10px;
+    }
+
+    .form-control-sm {
+        width: 200px;
+    }
+
+    .navigation-center a,
+    .navigation-right a {
+        font-size: 13px;
+        padding: 6px 12px;
+        height: 36px;
+    }
+
+    .dropdown-title {
+        font-size: 20px;
+    }
+
+    .conversation-list {
+        max-height: 350px;
+    }
+
+    .conversation-item {
+        padding: 10px 14px;
+    }
+
+    .conversation-avatar {
+        width: 48px;
+        height: 48px;
+        margin-right: 10px;
+    }
+
+    .conversation-preview {
+        font-size: 12px;
+    }
+
+    .online-dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .dropdown-avatar {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* User Activity Status */
+.user-activity-status {
+    font-size: 12px;
+    color: #65676b;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.user-activity-status.online {
+    color: #42b883;
+}
+
+.user-activity-status .activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #42b883;
+    display: inline-block;
+}
+
+.user-activity-status.offline .activity-dot {
+    background: #8a8d91;
+}
+
+
+.online-dot.offline {
+    background: #8a8d91;
+}
+
+/* User Activity Status trong Header Dropdown */
+.dropdown-menu .conversation-item .user-activity-status {
+    font-size: 10px;
+    margin-top: 2px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.dropdown-menu .conversation-item .user-activity-status.online {
+    background: rgba(0, 210, 106, 0.15);
+    color: #00a855;
+    font-weight: 600;
+}
+
+.dropdown-menu .conversation-item .user-activity-status.offline {
+    background: rgba(138, 141, 145, 0.1);
+    color: #8a8d91;
+}
+
+/* Online dot improvements */
+.conversation-item .online-dot {
+    width: 14px;
+    height: 14px;
+    background: #00d26a;
+    border: 3px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.conversation-item .online-dot.offline {
+    background: #8a8d91;
+}
+@media (max-width: 576px) {
+    .navbar {
+        padding: 0 5px;
+        height: 56px; /* Thu nhỏ navbar nếu cần */
+    }
+
+    .logo {
+        font-size: 1.5rem;
+    }
+
+    .form-control-sm {
+        width: 150px;
+    }
+
+    .nav-icon-wrapper {
+        width: 36px;
+        height: 36px;
+    }
+
+    .navigation-center a,
+    .navigation-right a {
+        font-size: 12px;
+        padding: 5px 10px;
+        height: 32px;
+    }
+
+    .dropdown-header {
+        padding: 12px 16px;
+    }
+
+    .dropdown-title {
+        font-size: 18px;
+    }
+
+    .conversation-list {
+        max-height: 300px;
+    }
+
+    .conversation-item {
+        padding: 8px 12px;
+    }
+
+    .conversation-avatar {
+        width: 40px;
+        height: 40px;
+        margin-right: 8px;
+    }
+
+    .online-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+    }
+
+    .dropdown-avatar {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Full width dropdowns on mobile */
+    .dropdown-menu {
+        position: fixed !important; /* Chuyển sang fixed để tránh che khuất và full viewport */
+        top: 56px !important; /* Dựa trên height navbar mobile */
+        left: 0 !important;
+        right: auto !important;
+        width: 100vw !important;
+        max-width: none !important;
+        max-height: calc(100vh - 56px) !important; /* Chiếm hết chiều cao còn lại */
+        overflow-y: auto !important;
+        border-radius: 0 !important; /* Loại bỏ góc bo để full */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important; /* Thêm shadow cho nổi bật */
+        z-index: 1050 !important; /* Cao hơn navbar để không bị che */
+        transition: opacity 0.3s ease !important;
+    }
+
+    .dropdown-menu.show {
+        opacity: 1;
+    }
+
+    /* Specific for menuList, notificationList, user dropdown */
+    #menuList,
+    #notificationList,
+    .nav-item.dropdown .dropdown-menu {
+        left: 0 !important;
+        transform: none !important;
+    }
+
+    /* Custom message dropdown */
+    #messageDropdown {
+        position: fixed !important;
+        top: 56px !important;
+        left: 0 !important;
+        width: 100vw !important;
+        max-height: calc(100vh - 56px) !important;
+        overflow-y: auto !important;
+        border-radius: 0 !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
+        z-index: 1050 !important;
+        background: #fff !important; /* Đảm bảo background trắng để nổi bật */
+        transition: opacity 0.3s ease !important;
+    }
+
+    #messageDropdown.show {
+        opacity: 1;
+    }
+
+    /* Đảm bảo dropdown không bị che bởi modal hoặc nội dung khác */
+    .modal {
+        z-index: 1060 !important; /* Cao hơn dropdown nếu cần */
+    }
+}
+
+.unread-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #1877f2; /* xanh Facebook */
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    position: absolute;
+    right: 5%;
+}

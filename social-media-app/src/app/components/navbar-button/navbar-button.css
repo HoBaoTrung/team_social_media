@@ -1,0 +1,18 @@
+.nav-icon-wrapper {
+    background-color: #3a3b3c;
+    border-radius: 10%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+    position: relative;
+}
+
+
+a:hover{
+    background: #ff6ecf;
+    transform: scale(1.1);
+    cursor: pointer;
+}

@@ -1,0 +1,133 @@
+<div class="container" [class.active]="isRegisterMode">
+
+  <!-- REGISTER -->
+  <div class="form-container sign-up">
+    <form [formGroup]="registerForm" (ngSubmit)="register()">
+
+      <div class="social-icons">
+        <a href="/oauth2/authorization/google" class="icon">
+          <fa-icon [icon]="faGoogle"></fa-icon>
+        </a>
+        <a href="/oauth2/authorization/facebook" class="icon">
+          <fa-icon [icon]="faFacebook"></fa-icon>
+        </a>
+      </div>
+
+      <div class="input-register d-flex">
+        <div class="field">
+          <input formControlName="firstName" placeholder="Tên">
+          <span *ngIf="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched"
+            class="error-message">
+            Tên không hợp lệ
+          </span>
+        </div>
+
+        <div class="field">
+          <input formControlName="lastName" placeholder="Họ">
+          <!-- nếu có error thì thêm span tương tự -->
+        </div>
+
+        <div class="field">
+          <input formControlName="username" placeholder="Tên đăng nhập *" required>
+          <span *ngIf="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
+            class="error-message">
+            Username không hợp lệ
+          </span>
+        </div>
+
+        <div class="field">
+          <input formControlName="email" type="email" placeholder="Email *" required>
+          <span *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+            class="error-message">
+            Email không hợp lệ
+          </span>
+        </div>
+
+        <div class="field">
+          <input formControlName="phone" placeholder="Số điện thoại *" required>
+          <span *ngIf="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched"
+            class="error-message">
+            Số điện thoại không hợp lệ
+          </span>
+        </div>
+
+        <div class="field">
+          <input formControlName="dateOfBirth" type="date" [max]="maxDate" required>
+        </div>
+
+        <div class="field">
+          <input formControlName="password" type="password" placeholder="Mật khẩu *" required>
+        </div>
+
+        <div class="field">
+          <input formControlName="confirmPassword" type="password" placeholder="Xác nhận mật khẩu *" required>
+        </div>
+      </div>
+
+      <button type="submit">Đăng ký</button>
+
+    </form>
+  </div>
+
+
+  <!-- LOGIN -->
+  <div class="form-container sign-in">
+
+    <form [formGroup]="loginForm" (ngSubmit)="login()">
+
+      <h1>Đăng nhập</h1>
+
+      <div class="social-icons">
+        <a href="/oauth2/authorization/google" class="icon">
+          <fa-icon [icon]="faGoogle"></fa-icon>
+        </a>
+        <a href="/oauth2/authorization/facebook" class="icon">
+          <fa-icon [icon]="faFacebook"></fa-icon>
+        </a>
+      </div>
+
+      @if (errorMessage) {
+      <div class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+      }
+
+      <input name="login_username" formControlName="login_username" placeholder="Tên đăng nhập hoặc Email">
+      <input name="login_password" formControlName="login_password" type="password" placeholder="Mật khẩu">
+
+      <a href="#">Quên mật khẩu?</a>
+
+      <button type="submit">Đăng nhập</button>
+
+      <p>
+        Chưa có tài khoản?
+        <a style="cursor: pointer;" (click)="switchToRegister()" class="text-success cursor-pointer">
+          Đăng ký ngay
+        </a>
+      </p>
+
+    </form>
+
+  </div>
+
+
+  <!-- TOGGLE -->
+  <div class="toggle-container">
+    <div class="toggle">
+
+      <div class="toggle-panel toggle-left">
+        <h1>Chào mừng trở lại!</h1>
+        <p>Nhập thông tin cá nhân để sử dụng tất cả tính năng</p>
+        <button class="hidden" (click)="switchToLogin()">Đăng nhập</button>
+      </div>
+
+      <div class="toggle-panel toggle-right">
+        <h1>Xin chào!</h1>
+        <p>Đăng ký để sử dụng tất cả tính năng</p>
+        <button class="hidden" (click)="switchToRegister()">Đăng ký</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

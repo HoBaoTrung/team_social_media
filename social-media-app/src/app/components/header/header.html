@@ -1,0 +1,41 @@
+<nav class="navbar navbar-expand-lg shadow-sm">
+  <div class="container-fluid d-flex justify-content-between align-items-center px-3">
+    <!-- LEFT: Logo + Search -->
+    <div class="d-flex align-items-center" style="gap: 10px;">
+      <a class="navbar-brand me-2 logo" routerLink="/news-feed">
+        <img src="assets/2023_Facebook_icon.svg.webp" alt="Facebook" height="42" />
+      </a>
+      <form class="d-none d-md-block" role="search">
+        <input class="form-control form-control-sm" type="search" placeholder="Tìm kiếm..." aria-label="Search"
+          [(ngModel)]="searchQuery" name="searchQuery" />
+      </form>
+    </div>
+
+    <!-- CENTER: Navigation icons -->
+    <div class="d-none d-lg-flex justify-content-center align-items-center flex-grow-1 navigation-center">
+      <app-navbar-button routerLink="/news-feed" title="Trang chủ" [icon]="faHome"></app-navbar-button>
+      <app-navbar-button routerLink="/friends" title="Bạn bè" [icon]="faUserFriends"></app-navbar-button>
+      <app-navbar-button routerLink="/marketplace" title="Marketplace" [icon]="faStore"
+        (click)="alertDeveloping.preventDeveloping($event)"></app-navbar-button>
+      <app-navbar-button routerLink="/groups" title="Nhóm" [icon]="faUsers"
+        (click)="alertDeveloping.preventDeveloping($event)"></app-navbar-button>
+    </div>
+
+    <app-navbar-container></app-navbar-container>
+
+  </div>
+</nav>
+
+<!-- Modal Tạo nhóm -->
+<div class="modal fade" id="createGroupModal" data-bs-backdrop="false">
+  <!-- Giữ nguyên nội dung modal, chỉ thay oninput → (input), onclick → (click) -->
+  <!-- Ví dụ: -->
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <!-- ... -->
+      <!-- <input id="cg-search" class="form-control mb-2" placeholder="Gõ tên để tìm..." (input)="searchUsersForGroup($event.target.value)" /> -->
+      <!-- ... -->
+      <!-- <button id="cg-create" class="btn btn-primary" (click)="createGroup()">Tạo nhóm</button> -->
+    </div>
+  </div>
+</div>
