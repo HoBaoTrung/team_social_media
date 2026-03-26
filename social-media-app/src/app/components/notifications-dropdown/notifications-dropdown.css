@@ -1,48 +1,24 @@
-.notification-viewport {
-  scrollbar-width: thin;
-  scrollbar-color: #aaa transparent;
-}
+/* Import shared dropdown styles */
+@import '../shared/dropdown-shared.css';
 
-.notification-viewport::-webkit-scrollbar {
-  width: 6px;
-}
-
-.notification-item {
-  height: 92px !important;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  transition: background-color 0.2s;
-  overflow: hidden;
+/* Notification dropdown specific styles */
+.notification-dropdown {
   position: relative;
 }
-
-.notification-item:hover {
-  background-color: #f8f9fa;
-}
-
-.badge-new {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  background-color: #0d6efd;    
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  line-height: 1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  z-index: 2;
-}
-
-.notification-item img {
-  flex-shrink: 0;
-}
-
 
 .notification-trigger {
   cursor: pointer;
 }
+
+/* Override or extend shared styles if needed */
+.notification-dropdown .dropdown-menu {
+  position: absolute;
+  border: none;
+  border-radius: 8px;
+}
+
+/* Specific styles for notification items */
+.notification-dropdown .dropdown-item {
+  height: 92px !important;
+}
+

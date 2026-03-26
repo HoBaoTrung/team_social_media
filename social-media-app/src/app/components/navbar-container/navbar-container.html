@@ -11,7 +11,7 @@
   <app-notifications-dropdown></app-notifications-dropdown>
 
   <!-- Authenticated: User Dropdown -->
-  @if (isAuthenticated | async) {
+  @if (isAuthenticated) {
     <app-user-dropdown></app-user-dropdown>
   } @else {
     <app-login-icon></app-login-icon>

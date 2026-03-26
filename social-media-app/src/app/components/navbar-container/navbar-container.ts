@@ -31,7 +31,7 @@ import { NotificationsDropdown } from '../notifications-dropdown/notifications-d
 export class NavbarContainerComponent {
   private authService = inject(AuthService);
 
-  isAuthenticated = this.authService.isAuthenticated(); 
+  isAuthenticated = this.authService.isLoggedIn(); 
 
   faBars = faBars;
   faCommentDots = faCommentDots;

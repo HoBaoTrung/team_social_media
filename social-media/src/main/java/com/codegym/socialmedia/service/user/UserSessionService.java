@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,7 +26,7 @@ public class UserSessionService {
     private JwtUtil jwtUtil;
 
     /**
-     * ✅ Tạo mới session khi người dùng đăng nhập
+     * Tạo mới session khi người dùng đăng nhập
      */
     public void createSession(User user, HttpServletRequest request, HttpServletResponse response) {
         String accessToken = jwtUtil.generateToken(user.getUsername()); // 10h
@@ -49,8 +51,50 @@ public class UserSessionService {
         addCookie(response, "refresh_token", refreshToken, 30 * 24 * 60 * 60);
     }
 
+    //Tạo mới session khi người dùng đăng nhập bằng api
+    public Map<String, String> createRefreshToken_AccessToken(User user, HttpServletRequest request) {
+        String accessToken = jwtUtil.generateToken(user.getUsername()); // 10p
+        String refreshToken = UUID.randomUUID().toString();             // 30 ngày
+
+        UserSession session = new UserSession();
+        session.setUser(user);
+        session.setRefreshToken(refreshToken);
+        session.setIpAddress(request.getRemoteAddr());
+        session.setUserAgent(request.getHeader("User-Agent"));
+        session.setDeviceInfo(detectDevice(request.getHeader("User-Agent")));
+        session.setLoginMethod(UserSession.LoginMethod.WEB);
+        session.setCreatedAt(LocalDateTime.now());
+        session.setExpiresAt(LocalDateTime.now().plusDays(30)); // refresh token hết hạn
+        session.setLastActivity(LocalDateTime.now());
+
+        userSessionRepository.save(session);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("access_token", accessToken);
+        result.put("refresh_token", refreshToken);
+        return result;
+    }
+    public String refreshAccessTokenIfNeededForApi(String refreshToken, HttpServletResponse response) {
+        Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshToken(refreshToken);
+        if (sessionOpt.isEmpty()) return null;
+
+        UserSession session = sessionOpt.get();
+
+        // RefreshToken hết hạn?
+        if (session.getExpiresAt().isBefore(LocalDateTime.now())) {
+            logoutSession(refreshToken, response);
+            return null;
+        }
+
+        // Sinh access token mới
+        String username = session.getUser().getUsername();
+        String newAccessToken = jwtUtil.generateToken(username);
+
+        return newAccessToken;
+    }
+
     /**
-     * ✅ Làm mới accessToken khi accessToken hết hạn nhưng refreshToken còn hạn
+     * Làm mới accessToken khi accessToken hết hạn nhưng refreshToken còn hạn
      */
     public String refreshAccessTokenIfNeeded(String refreshToken, HttpServletResponse response) {
         Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshToken(refreshToken);
@@ -67,9 +111,6 @@ public class UserSessionService {
         // Sinh access token mới
         String username = session.getUser().getUsername();
         String newAccessToken = jwtUtil.generateToken(username);
-
-        session.setLastActivity(LocalDateTime.now());
-        userSessionRepository.save(session);
 
         // Cập nhật cookie
         addCookie(response, "jwt_token", newAccessToken, 10 * 60 * 60);

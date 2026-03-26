@@ -1,39 +1,50 @@
-// src/app/interceptors/auth.interceptor.ts
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
-import { catchError, throwError } from 'rxjs';
+import { catchError, switchMap, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
-  const router = inject(Router);
 
-  // Bỏ qua request login/register (không cần token)
-  if (req.url.includes('/auth/login') || req.url.includes('/auth/register')) {
+  // Bỏ qua auth requests (login, register, refresh, logout, me)
+  if (
+    req.url.includes('/auth/login') ||
+    req.url.includes('/auth/register') ||
+    req.url.includes('/auth/refresh') ||
+    req.url.includes('/auth/logout') ||
+    req.url.includes('/auth/me')
+  ) {
     return next(req);
   }
 
-  const token = authService.getToken();
-
+  const token = authService.getAccessToken();
   let authReq = req;
 
   if (token) {
     authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
+      setHeaders: { Authorization: `Bearer ${token}` }
     });
   }
 
   return next(authReq).pipe(
-    catchError((error) => {
-      if (error.status === 401) {
-        // Token invalid/expired → logout và redirect
-        authService.logout();
-        router.navigate(['/login']);
-      }
-      return throwError(() => error);
+    catchError(err => {
+      if (err.status !== 401) return throwError(() => err);
+
+      // Token expired → refresh rồi retry (chỉ 1 lần)
+      return authService.refreshAccessToken().pipe(
+        switchMap(res => {
+          const newToken = res.access_token;
+          const retryReq = req.clone({
+            setHeaders: { Authorization: `Bearer ${newToken}` }
+          });
+          return next(retryReq);
+        }),
+        catchError(refreshErr => {
+          // Refresh fail → logout + throw error
+          console.error('Token refresh failed:', refreshErr);
+          return throwError(() => refreshErr);
+        })
+      );
     })
   );
 };

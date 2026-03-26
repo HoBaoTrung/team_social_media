@@ -1,11 +1,12 @@
 package com.codegym.socialmedia.controller;
 
 import com.codegym.socialmedia.dto.authen.LoginRequest;
-import com.codegym.socialmedia.jwt.JwtUtil;
+
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.service.user.CustomUserPrincipal;
 import com.codegym.socialmedia.service.user.UserSessionService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -27,10 +28,11 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
-
+    private final UserSessionService userSessionService;
     private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
     private final IUserRepository userRepository;
+
+
 
     @PostMapping("/login")
     public ResponseEntity<?> login(
@@ -39,7 +41,6 @@ public class AuthController {
             HttpServletResponse httpResponse) {
 
         try {
-            // Xác thực username/password
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.username(),
@@ -47,11 +48,9 @@ public class AuthController {
                     )
             );
 
-            // Lấy UserDetails
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String username = userDetails.getUsername();
 
-            // Tìm User entity (nếu cần thêm thông tin)
             User user = userRepository.findByUsername(username);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -59,15 +58,20 @@ public class AuthController {
             }
 
             // Generate JWT
-            String jwt = jwtUtil.generateToken(username);
+            Map<String, String> tokens = userSessionService.createRefreshToken_AccessToken(user, httpRequest);
 
-            // Nếu bạn vẫn muốn tạo session phụ (remember-me, websocket, etc...)
-            // userSessionService.createSession(user, httpRequest, httpResponse);
-            // Nhưng nếu STATELESS thì thường không cần
+            // Set refresh_token vào HttpOnly Cookie
+            Cookie refreshCookie = new Cookie("refresh_token", tokens.get("refresh_token"));
+            refreshCookie.setHttpOnly(true);
+            refreshCookie.setSecure(true);
+            refreshCookie.setPath("/");
+            refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7 ngày
+            httpResponse.addCookie(refreshCookie);
 
-            // Return response
+            // Return response (chỉ access_token + user info)
             Map<String, Object> response = new HashMap<>();
-            response.put("token", jwt);
+            response.put("access_token", tokens.get("access_token"));
+            response.put("id", user.getId());
             response.put("username", username);
             response.put("fullName", user.getFullName());
             response.put("avatarUrl", user.getProfilePicture());
@@ -81,6 +85,63 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Authentication failed. Please try again later."));
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request,
+                                    HttpServletResponse response) {
+
+        String refreshToken = getRefreshTokenFromCookie(request);
+
+        if (refreshToken != null) {
+            userSessionService.logoutSession(refreshToken, response);
+
+            return ResponseEntity.ok("Logged out successfully");
+        }
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "User not found in database"));
+    }
+
+    private String getRefreshTokenFromCookie(HttpServletRequest request) {
+        if (request.getCookies() == null) return null;
+
+        for (Cookie cookie : request.getCookies()) {
+            if ("refresh_token".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            // Lấy refresh_token từ cookie
+            String refreshToken = getRefreshTokenFromCookie(request);
+
+            if (refreshToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Refresh token not found"));
+            }
+
+            // Kiểm tra refresh_token và tạo token mới hợp lệ
+            String newAccessToken = userSessionService.refreshAccessTokenIfNeededForApi(refreshToken, response);
+            if (newAccessToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid refresh token"));
+            }
+
+            // Trả về access_token mới
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("access_token", newAccessToken);
+
+            return ResponseEntity.ok(responseBody);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to refresh token"));
         }
     }
 
@@ -103,4 +164,6 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+
+
 }

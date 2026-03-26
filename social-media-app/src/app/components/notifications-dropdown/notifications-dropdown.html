@@ -1,7 +1,7 @@
 
 <div class="notification-wrapper notification-dropdown">
-  <button #trigger class="nav-icon-wrapper position-relative" (click)="toggleDropdown()"
-    [attr.aria-expanded]="showNotificationDropdown">
+  <button #trigger class="nav-icon-wrapper position-relative notification-trigger" (click)="toggleDropdown()"
+    [attr.aria-expanded]="showDropdown">
     <fa-icon [icon]="faBell" size="lg" class="nav-icon"></fa-icon>
 
     @if (unreadCount > 0) {
@@ -11,64 +11,59 @@
     }
   </button>
 
-  @if (showNotificationDropdown) {
+  @if (showDropdown) {
   <div #dropdown class="dropdown-menu dropdown-menu-end show shadow-lg p-0" style="width: 390px;">
 
-    <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
-      <h6 class="mb-0 fw-semibold">Thông báo</h6>
+    <div class="dropdown-header">
+      <h6 class="dropdown-header-title">Thông báo</h6>
       @if (unreadCount > 0) {
-      <button class="btn btn-sm btn-outline-primary" (click)="markAllAsRead()">Đánh dấu tất cả đã đọc</button>
+      <button class="dropdown-header-action" (click)="markAllAsRead()">Đánh dấu tất cả đã đọc</button>
       }
     </div>
 
     <!-- Virtual Scroll -->
     <cdk-virtual-scroll-viewport #viewport itemSize="92" minBufferPx="200" maxBufferPx="400"
-      class="notification-viewport" style="height: 420px;">
+      class="dropdown-viewport" style="height: 420px;">
 
-      <div *cdkVirtualFor="let notif of notifications(); trackBy: trackById" class="notification-item"
-        [class.bg-light-subtle]="!notif.isRead" (click)="markAsRead(notif)">
+      <div *cdkVirtualFor="let notif of notifications(); trackBy: trackById" class="dropdown-item"
+        [class.unread]="!notif.isRead" (click)="markAsRead(notif)">
 
-        <div class="d-flex align-items-start position-relative w-100">
+        <!-- Avatar -->
+        <img [src]="notif.sender.avatarUrl || '/assets/images/default-avatar.jpg'"
+          class="dropdown-item-avatar" alt="avatar">
 
-          <!-- Avatar -->
-          <img [src]="notif.sender.avatarUrl || '/assets/images/default-avatar.jpg'"
-            class="rounded-circle me-3 flex-shrink-0" width="44" height="44" alt="avatar">
+        <!-- Nội dung chính -->
+        <div class="dropdown-item-content">
+          <div class="dropdown-item-header">
+            <strong class="dropdown-item-sender">{{ notif.sender.fullName || notif.sender.username }}</strong>
+            <span class="dropdown-item-timestamp">{{ notif.createdAt }}</span>
+          </div>
 
-          <!-- Nội dung chính -->
-          <div class="flex-grow-1">
-            <strong class="me-2">{{ notif.sender.fullName || notif.sender.username }}</strong>
-            <div>
-
-              <small class="text-muted">{{ notif.createdAt }}</small>
-            </div>
-
-            <div class="mt-1 small">
-              @switch (notif.notificationType) {
+          <div class="dropdown-item-message">
+            @switch (notif.notificationType) {
               @case ('LIKE') { đã thích bài viết của bạn }
               @case ('COMMENT') { đã bình luận về bài viết của bạn }
               @case ('FOLLOW') { đã theo dõi bạn }
               @default { {{ notif.notificationType }} }
-              }
-            </div>
+            }
           </div>
-
-    
-          @if (!notif.isRead) {
-          <span class="badge-new">Mới</span>
-          }
-
         </div>
+
+        @if (!notif.isRead) {
+        <span class="badge-new">Mới</span>
+        }
+
       </div>
     </cdk-virtual-scroll-viewport>
 
     @if (isLoadingMore) {
-    <div class="text-center py-2 border-top">
+    <div class="dropdown-loading border-top">
       <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
     </div>
     }
 
-    <div class="p-3 text-center border-top bg-light">
-      <a routerLink="/notifications" class="text-primary text-decoration-none small">Xem tất cả thông báo →</a>
+    <div class="dropdown-footer">
+      <a routerLink="/notifications" class="text-decoration-none">Xem tất cả thông báo →</a>
     </div>
   </div>
   }

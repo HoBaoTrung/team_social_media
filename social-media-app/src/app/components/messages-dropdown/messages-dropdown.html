@@ -1,48 +1,76 @@
 <div class="message-dropdown">
-
-  <!-- ICON -->
-  <div appTooltip="Tin nhắn" #trigger class="nav-icon-wrapper position-relative" (click)="toggleDropdown()" style="cursor: pointer;">
-    <fa-icon [icon]="faCommentDots" class="fa-lg nav-icon"></fa-icon>
+  <!-- Icon with unread badge -->
+  <button #trigger class="nav-icon-wrapper position-relative message-trigger"
+    (click)="toggleDropdown()"
+    [attr.aria-expanded]="showDropdown">
+    <fa-icon [icon]="faCommentDots" size="lg" class="nav-icon"></fa-icon>
 
     @if (unreadCount > 0) {
-    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-      style="font-size: 0.7rem;">
-      {{ unreadCount }}
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+      {{ unreadCount > 99 ? '99+' : unreadCount }}
     </span>
     }
-  </div>
+  </button>
 
-  <!-- DROPDOWN -->
-  <div #dropdown class="message-list-dropdown" [class.show]="showMessageDropdown">
+  <!-- Dropdown Menu -->
+  @if (showDropdown) {
+  <div #dropdown class="dropdown-menu dropdown-menu-end show shadow-lg p-0" style="width: 390px;">
 
+    <!-- Header -->
     <div class="dropdown-header">
-      <h5 class="dropdown-title">Tin nhắn</h5>
+      <h6 class="dropdown-header-title">Tin nhắn</h6>
     </div>
 
-    <div class="conversation-list">
+    <!-- Virtual Scroll -->
+    <cdk-virtual-scroll-viewport #viewport itemSize="92" minBufferPx="200" maxBufferPx="400"
+      class="dropdown-viewport" style="height: 420px;">
 
-      @if (isLoading) {
-      <div class="loading-state">
-        <i class="fas fa-spinner fa-spin"></i>
-        <div>Đang tải...</div>
+      <div *cdkVirtualFor="let conv of conversations(); trackBy: trackById"
+        class="dropdown-item"
+        [class.unread]="conv.unreadCount > 0"
+        (click)="markAsRead(conv)">
+
+        <!-- Avatar -->
+        <img [src]="conv.avatar  || '/assets/images/default-avatar.jpg'"
+          class="dropdown-item-avatar" alt="avatar">
+
+        <!-- Content -->
+        <div class="dropdown-item-content">
+          <div class="dropdown-item-header">
+            <strong class="dropdown-item-sender">
+             {{ conv.name || conv.participants?.[0]?.fullName || conv.participants?.[0]?.username }}
+            </strong>
+            <span class="dropdown-item-timestamp">{{ conv.lastMessageTime }}</span>
+          </div>
+
+          <div class="dropdown-item-message">
+            @if (conv.lastMessage) {
+            {{ conv.lastMessage }}
+            }
+          </div>
+        </div>
+
+        <!-- Unread indicator -->
+        @if (conv.unreadCount > 0) {
+        <span class="badge-new">{{ conv.unreadCount > 9 ? '9+' : conv.unreadCount }}</span>
+        }
+
       </div>
-      } @else {
 
-      <!-- Demo data -->
-      @if (conversations.length === 0) {
-      <div class="empty-state">Không có tin nhắn</div>
-      } @else {
-      @for (item of conversations; track item.id) {
-      <div class="conversation-item">
-        <strong>{{ item.name }}</strong>
-        <p>{{ item.lastMessage }}</p>
-      </div>
-      }
-      }
+    </cdk-virtual-scroll-viewport>
 
-      }
+    <!-- Loading state -->
+    @if (isLoadingMore) {
+    <div class="dropdown-loading border-top">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+    </div>
+    }
 
+    <!-- Footer -->
+    <div class="dropdown-footer">
+      <a routerLink="/messages" class="text-decoration-none">Xem tất cả tin nhắn →</a>
     </div>
 
   </div>
+  }
 </div>
