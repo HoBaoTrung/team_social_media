@@ -1,0 +1,87 @@
+<div class="chat-window" [class.minimized]="isMinimized" [class.hidden]="isClosed">
+
+  <!-- Header -->
+  <div class="chat-header">
+    <div class="user-info" (click)="toggleMinimize()">
+      <img [src]="userAvatar" alt="Avatar" class="avatar">
+      <div class="user-details">
+        <h4>{{ userName }}</h4>
+        <p class="status" [class.online]="isOnline">{{ isOnline ? 'Đang hoạt động' : 'Ngoại tuyến' }}</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-icon" (click)="startVideoCall()" title="Gọi video">
+        <fa-icon [icon]="['fas', 'video']"></fa-icon>
+      </button>
+      <button class="btn-icon" (click)="toggleMinimize()" title="Thu nhỏ">
+        <fa-icon [icon]="isMinimized ? ['fas', 'expand'] : ['fas', 'compress']"></fa-icon>
+      </button>
+      <button class="btn-icon" (click)="closeChat()" title="Đóng">
+        <fa-icon [icon]="['fas', 'times']"></fa-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body: Danh sách tin nhắn -->
+  <div class="chat-body" #chatBody>
+    <!-- Loading indicator -->
+    <div *ngIf="isLoading && messages.length === 0" class="loading-indicator">
+      <div class="spinner"></div>
+      <p>Đang tải tin nhắn...</p>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!isLoading && messages.length === 0" class="empty-state">
+      <p>Hãy bắt đầu cuộc hội thoại</p>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages" *ngIf="messages.length > 0">
+      <div *ngFor="let msg of messages" class="message" [class.my-message]="msg.isMine">
+        <div class="message-content">
+          <img *ngIf="msg.type === 'IMAGE'" [src]="msg.content" class="chat-image">
+          <a *ngIf="msg.type === 'FILE'" [href]="msg.content" target="_blank" class="file-link">
+            📎 {{ msg.fileName }}
+          </a>
+          <p *ngIf="msg.type === 'TEXT'">{{ msg.content }}</p>
+        </div>
+        <small class="time">{{ msg.time }}</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="chat-input-area">
+    <div class="input-toolbar">
+      <button class="btn-icon" (click)="triggerFileInput()" title="Gửi file" [disabled]="isSending || uploadingFile">
+        <fa-icon [icon]="['fas', 'paperclip']"></fa-icon>
+      </button>
+      <button class="btn-icon" (click)="triggerImageInput()" title="Gửi hình ảnh" [disabled]="isSending || uploadingFile">
+        <fa-icon [icon]="['fas', 'image']"></fa-icon>
+      </button>
+    </div>
+
+    <!-- Upload progress -->
+    <div *ngIf="uploadingFile" class="upload-progress">
+      <div class="progress-bar" [style.width.%]="uploadProgress"></div>
+    </div>
+
+    <input type="text"
+           [(ngModel)]="newMessage"
+           (keyup.enter)="sendMessage()"
+           placeholder="Nhập tin nhắn..."
+           class="chat-input"
+           [disabled]="isSending || !conversationId || uploadingFile">
+
+    <button class="btn-send"
+            (click)="sendMessage()"
+            [disabled]="!newMessage.trim() || isSending || !conversationId || uploadingFile">
+      <fa-icon [icon]="['fas', 'paper-plane']"></fa-icon>
+    </button>
+  </div>
+
+  <!-- Hidden file inputs -->
+  <input #fileInput type="file" (change)="onFileSelected($event)" style="display: none;">
+  <input #imageInput type="file" accept="image/*" (change)="onImageSelected($event)" style="display: none;">
+</div>

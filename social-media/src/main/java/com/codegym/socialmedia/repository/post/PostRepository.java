@@ -16,7 +16,13 @@ import java.util.Optional;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    // BASIC methods - không có complex queries
+    @Query("""
+        SELECT p FROM Post p 
+        JOIN FETCH p.user 
+        WHERE p.isDeleted = false 
+        AND p.id IN :ids
+    """)
+    List<Post> findPostsByIdsWithUser(@Param("ids") List<Long> ids);
 
     //  Find posts by user with pagination
     Page<Post> findByUserAndIsDeletedFalseOrderByCreatedAtDesc(User user, Pageable pageable);
@@ -84,8 +90,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
 
     @Query("""
-    SELECT p FROM Post p
-    WHERE p.isDeleted = false
+    SELECT p FROM Post p JOIN FETCH p.user
+    WHERE p.isDeleted = false 
     AND p.id IN :ids
     AND (
         p.privacyLevel = 'PUBLIC'
@@ -143,7 +149,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findTop100ByPrivacyLevelOrderByCreatedAtDesc(PrivacyLevel privacyLevel);
 
     @Query(""" 
-                SELECT p FROM Post p WHERE p.isDeleted = false and p.id IN :postIds
+                SELECT p FROM Post p JOIN FETCH p.user WHERE p.isDeleted = false and p.id IN :postIds
             """)
     List<Post> findByIdIn(List<Long> postIds);
 

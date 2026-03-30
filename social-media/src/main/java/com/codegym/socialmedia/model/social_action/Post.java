@@ -62,4 +62,6 @@ public class Post {
     public String toString() {
         return "[id: " + id + ", content: " + content + "]";
     }
+
+    public Long getOwnerId(){return this.user.getId();}
 }

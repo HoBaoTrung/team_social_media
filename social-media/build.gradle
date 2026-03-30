@@ -60,6 +60,10 @@ dependencies {
     implementation 'org.webjars:stomp-websocket:2.3.4'
     implementation 'org.springframework:spring-messaging'
 
+
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
+    implementation 'com.google.cloud:google-cloud-firestore:3.13.0'
+
 }
 
 tasks.named('test') {

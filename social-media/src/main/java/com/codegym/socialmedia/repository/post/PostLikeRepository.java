@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface PostLikeRepository extends JpaRepository<LikePost, LikePostId> {
@@ -19,11 +20,23 @@ public interface PostLikeRepository extends JpaRepository<LikePost, LikePostId> 
     // Tìm like của user cho post cụ thể
     Optional<LikePost> findByPostAndUser(Post post, User user);
 
-    // Kiểm tra user đã like post chưa
-//    boolean existsByPostAndUser(Post post, User user);
+    @Query("SELECT pl.id.postId FROM LikePost pl " +
+            "WHERE pl.id.userId = :userId AND pl.id.postId IN :postIds")
+    Set<Long> findLikedPostIdsByUser(@Param("userId") Long userId,
+                                     @Param("postIds") List<Long> postIds);
 
     // Đếm số likes của post
     int countByPost(Post post);
+
+    @Query("SELECT pl.post.id AS postId, COUNT(pl) AS likeCount " +
+            "FROM LikePost pl " +
+            "WHERE pl.post.id IN :postIds " +
+            "GROUP BY pl.post.id")
+    List<LikeCountProjection> countByPostIds(@Param("postIds") List<Long> postIds);
+    public interface LikeCountProjection {
+        Long getPostId();
+        Integer getLikeCount();
+    }
 
     // Lấy danh sách users đã like post
     @Query("SELECT pl.user FROM LikePost pl WHERE pl.post = :post")

@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 🔹 Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 🔹 Helper function: Get current user ID
+    function getUserId() {
+      return request.auth.uid;
+    }
+
+    // 🔹 Helper function: Check if user is participant of conversation
+    function isConversationParticipant(conversationId) {
+      let conv = get(/databases/$(database)/documents/conversations/$(conversationId));
+      return conv.data.participants[getUserId()] == true;
+    }
+
+    // 🔹 Conversations Collection
+    // Structure:
+    // conversations/{conversationId}
+    //   - participants: { userId: true, ... }
+    //   - lastMessage: string
+    //   - updatedAt: timestamp
+    //   - unreadCount: { userId: number, ... }
+    //   - lastRead: { userId: timestamp, ... }
+
+    match /conversations/{conversationId} {
+      // 📖 Read: Only participants can read conversation metadata
+      allow read: if isAuthenticated() && isConversationParticipant(conversationId);
+
+      // ✍️ Write: Only backend (service account) can write
+      // Frontend cannot directly write conversations
+      allow write: if false;
+
+      // 🔒 Messages Subcollection
+      // Structure:
+      // conversations/{conversationId}/messages/{messageId}
+      //   - senderId: number
+      //   - senderName: string
+      //   - senderAvatar: string
+      //   - receiverId: number
+      //   - content: string
+      //   - type: 'TEXT' | 'IMAGE' | 'FILE'
+      //   - fileUrl: string (optional)
+      //   - fileName: string (optional)
+      //   - createdAt: timestamp
+      //   - readAt: timestamp (optional)
+
+      match /messages/{messageId} {
+        // 📖 Read: Only conversation participants can read messages
+        allow read: if isAuthenticated() && isConversationParticipant(conversationId);
+
+        // ✍️ Write: Only backend can write messages
+        // Frontend cannot directly write messages
+        allow write: if false;
+      }
+    }
+
+    // 🔹 User Conversations Mapping (Optional)
+    // For faster queries like "get all user's conversations"
+    // Structure:
+    // users/{userId}/conversations/{conversationId}
+    //   - participants: map
+    //   - lastMessage: string
+    //   - lastMessageTime: timestamp
+
+    match /users/{userId}/conversations/{conversationId} {
+      // 📖 Read: Users can only read their own conversations
+      allow read: if isAuthenticated() && getUserId() == userId;
+
+      // ✍️ Write: Only backend can write
+      allow write: if false;
+    }
+
+    // 🔹 Default: Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -288,6 +288,42 @@ public class FriendshipServiceImpl implements FriendshipService {
 
     }
 
+    @Override
+    public Map<Long, Friendship.FriendshipStatus> getFriendshipMap(User currentUser, List<Long> postOwnerIds) {
+        if (postOwnerIds == null || postOwnerIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // Loại bỏ trùng lặp và currentUser (không cần check bản thân)
+        List<Long> targetIds = postOwnerIds.stream()
+                .distinct()
+                .filter(id -> !id.equals(currentUser.getId()))
+                .collect(Collectors.toList());
+
+        if (targetIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Friendship> friendships = friendshipRepository
+                .findFriendshipsBetweenUserAndOthers(currentUser.getId(), targetIds);
+
+        // Tạo map mặc định là NOT_FRIEND
+        Map<Long, Friendship.FriendshipStatus> friendshipMap = targetIds.stream()
+                .collect(Collectors.toMap(id -> id, id -> Friendship.FriendshipStatus.NONE));
+
+        // Cập nhật status thật từ database
+        for (Friendship f : friendships) {
+            Long otherId = f.getAddressee().getId().equals(currentUser.getId())
+                    ? f.getRequester().getId()
+                    : f.getAddressee().getId();
+
+            friendshipMap.put(otherId, f.getStatus());
+        }
+
+        return friendshipMap;
+    }
+
+
     private String safeFullName(User u) {
         String f = Optional.ofNullable(u.getFirstName()).orElse("");
         String l = Optional.ofNullable(u.getLastName()).orElse("");

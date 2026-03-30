@@ -1,4 +1,4 @@
-/* Message dropdown specific styles - extends shared dropdown-shared.css */
+.dropdown-item-timestamp{margin: 0 !important;}
 
 .message-dropdown {
   position: relative;

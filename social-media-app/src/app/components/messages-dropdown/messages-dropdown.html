@@ -40,12 +40,13 @@
             <strong class="dropdown-item-sender">
              {{ conv.name || conv.participants?.[0]?.fullName || conv.participants?.[0]?.username }}
             </strong>
-            <span class="dropdown-item-timestamp">{{ conv.lastMessageTime }}</span>
           </div>
 
           <div class="dropdown-item-message">
             @if (conv.lastMessage) {
             {{ conv.lastMessage }}
+            <div><span class="dropdown-item-timestamp">{{ conv.lastMessageTime | date:'short' }}</span></div>
+            
             }
           </div>
         </div>

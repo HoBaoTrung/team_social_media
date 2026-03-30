@@ -6,11 +6,12 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { faCog, faSignOutAlt, faUserShield } from '@fortawesome/free-solid-svg-icons';
 
 import { AuthService } from '../../services/auth.service';
+import { UserLinkButtonComponent } from '../user-link-button/user-link-button';
 
 @Component({
   selector: 'app-user-dropdown',
   standalone: true,
-  imports: [CommonModule, RouterModule, FontAwesomeModule],
+  imports: [CommonModule, RouterModule, FontAwesomeModule, UserLinkButtonComponent],
   templateUrl: './user-dropdown.html',
   styleUrls: ['./user-dropdown.css']
 })

@@ -7,10 +7,7 @@
 
   <ul class="dropdown-menu dropdown-menu-end" style="width: 350px;">
     <li>
-      <a class="dropdown-item d-flex align-items-center" [routerLink]="['/profile', (user$ | async)?.username]">
-        <img [src]="(user$ | async)?.avatarUrl || '/images/default-avatar.jpg'" alt="Avatar" class="rounded-circle nav-icon-wrapper"/>
-        <span class="ms-2">{{ (user$ | async)?.fullName }}</span>
-      </a>
+      <app-user-link-button></app-user-link-button>
     </li>
     <li><a class="dropdown-item" routerLink="/setting"><fa-icon [icon]="faCog" class="icon"></fa-icon> Cài đặt</a></li>
 

@@ -91,7 +91,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**")  // Chỉ áp dụng cho mọi request bắt đầu bằng /api/
+                .securityMatcher("/api/**", "/posts/api/**")  // Chỉ áp dụng cho mọi request bắt đầu bằng /api/
 
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
@@ -126,6 +126,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
         http
+                .csrf(csrf -> csrf.disable())
                 .securityMatcher("/**")  // Áp dụng cho tất cả request còn lại (không thuộc /api/)
 
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

@@ -104,6 +104,13 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
             """)
     List<Friendship> findAllFriendshipsOfUser(@Param("userId") Long userId);
 
+    @Query("SELECT f FROM Friendship f " +
+            "WHERE (f.requester.id = :userId AND f.addressee.id IN :otherIds) " +
+            "   OR (f.addressee.id = :userId AND f.requester.id IN :otherIds)")
+    List<Friendship> findFriendshipsBetweenUserAndOthers(
+            @Param("userId") Long userId,
+            @Param("otherIds") List<Long> otherIds);
+
     @Query("""
                 SELECT COUNT(f)
                 FROM Friendship f

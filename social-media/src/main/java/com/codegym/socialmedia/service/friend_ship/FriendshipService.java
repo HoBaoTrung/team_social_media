@@ -9,6 +9,7 @@ import com.codegym.socialmedia.model.social_action.FriendshipId;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -31,5 +32,5 @@ public interface FriendshipService {
     Set<Long> findFriendIdsOfUser(Long userId);
     List<Friendship> findAllFriendshipsOfUser(Long userId);
     List<UserSearchDto> searchFriends(String keyword, Long currentUserId);
-
+    Map<Long, Friendship.FriendshipStatus> getFriendshipMap(User currentUser, List<Long> postOwnerIds);
 }

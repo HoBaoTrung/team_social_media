@@ -57,7 +57,7 @@ public class JwtUtil {
                 .setId(UUID.randomUUID().toString())
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10h
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60  * 10)) // 10p
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

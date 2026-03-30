@@ -1,1 +1,19 @@
-<p>home works!</p>
+<div class="bg-gray-100 min-h-screen pt-16">
+  <div class="max-w-[1200px] mx-auto d-flex justify-content-between gap-4 px-4">
+    
+    <!-- 1. Menu bên trái -->
+    <div class="w-72 hidden lg:block">
+      <app-left-menu></app-left-menu>
+    </div>
+
+    <!-- 2. Khu vực hiển thị bài viết (Feed) -->
+    <div class="flex-1 max-w-[680px]">
+      <app-feed></app-feed>
+    </div>
+
+    <!-- 3. Vùng liên hệ bên phải -->
+    <div class="w-80 hidden xl:block">
+      <app-right-sidebar></app-right-sidebar>
+    </div>
+  </div>
+</div>
