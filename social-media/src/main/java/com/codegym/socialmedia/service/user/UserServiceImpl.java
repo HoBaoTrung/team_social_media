@@ -2,10 +2,7 @@ package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.component.upload_file.CloudinaryService;
 import com.codegym.socialmedia.dto.user.UserRegistrationDto;
-import com.codegym.socialmedia.model.account.NotificationSettings;
-import com.codegym.socialmedia.model.account.Role;
-import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.model.account.UserPrivacySettings;
+import com.codegym.socialmedia.model.account.*;
 import com.codegym.socialmedia.repository.*;
 import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.repository.user.RoleRepository;
@@ -23,10 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 import static com.codegym.socialmedia.service.user.CustomOAuth2UserService.fromUrl;
 
@@ -108,6 +102,42 @@ public class UserServiceImpl implements UserService {
         }
 
         return null;
+    }
+
+    @Override
+    public AuthUser getAuthUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return null;
+        }
+
+        Object principal = auth.getPrincipal();
+        String str ="";
+        if (principal instanceof UserDetails) {
+            // Form login
+            str = ((UserDetails) principal).getUsername();
+
+        } else if (principal instanceof OAuth2User) {
+            // OAuth2 login
+            OAuth2User oauth2User = (OAuth2User) principal;
+            str = (String) oauth2User.getAttribute("email");
+        }
+
+        Set<Role> roles = roleRepository.findRolesByUsernameOrEmail(str);
+        boolean isAdmin = roles != null &&
+                roles.stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName()));
+
+        IUserRepository.AuthUserProjection proj = this.iUserRepository.findAuthUserData(str).orElseThrow(null);
+        AuthUser user = new AuthUser(
+                proj.getId(),
+                proj.getUsername(),
+                proj.getPassword(),
+                proj.getIsActive(),
+                proj.getAccountStatus(),
+                proj.getAvatar(),
+                proj.getFullName(),roles
+        );
+        return user;
     }
 
     @Override

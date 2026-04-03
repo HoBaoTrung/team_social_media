@@ -44,4 +44,10 @@ public interface PostLikeRepository extends JpaRepository<LikePost, LikePostId> 
 
     // Xóa like
     void deleteByPostAndUser(Post post, User user);
+
+    // Batch query: Check if user liked any of the posts
+    @Query("SELECT pl.id.postId FROM LikePost pl " +
+            "WHERE pl.id.userId = :userId AND pl.id.postId IN :postIds")
+    Set<Long> findLikedPostIdsByUserOptimized(@Param("userId") Long userId,
+                                              @Param("postIds") List<Long> postIds);
 }

@@ -7,9 +7,11 @@ import com.codegym.socialmedia.model.social_action.Post;
 public interface PrivacyPolicy {
     PrivacyLevel level();
 
-    //for post
-    boolean canView(User viewer, Post p, boolean isFriend);
+    boolean canView(PrivacyContext context);
 
-    // for profile
-    boolean canView(boolean isFriend);
+    @Deprecated(forRemoval = true)
+    default boolean canView(long viewerId, long ownerId, boolean isFriend) {
+        return canView(new PrivacyContext(viewerId, ownerId, isFriend));
+    }
+
 }

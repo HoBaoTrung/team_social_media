@@ -4,14 +4,17 @@ import com.codegym.socialmedia.model.PrivacyLevel;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PrivatePrivacyPolicy implements PrivacyPolicy {
+public class FriendExceptPrivacyPolicy implements PrivacyPolicy {
     @Override
     public PrivacyLevel level() {
-        return PrivacyLevel.PRIVATE;
+        return PrivacyLevel.FRIEND_EXCEPT;
     }
 
     @Override
     public boolean canView(PrivacyContext context) {
-        return false;
+        if (!context.isFriend()) {
+            return false;
+        }
+        return !context.getExcludedUserIds().contains(context.getViewerId());
     }
 }

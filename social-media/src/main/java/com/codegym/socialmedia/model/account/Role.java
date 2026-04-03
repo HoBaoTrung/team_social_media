@@ -2,6 +2,7 @@ package com.codegym.socialmedia.model.account;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.util.List;
 
@@ -10,7 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Role {
+public class Role implements GrantedAuthority {
 
     public Role(String role) {
         this.name=role;
@@ -23,4 +24,8 @@ public class Role {
     @Column(unique = true, nullable = false)
     private String name;
 
+    @Override
+    public String getAuthority() {
+        return name;
+    }
 }

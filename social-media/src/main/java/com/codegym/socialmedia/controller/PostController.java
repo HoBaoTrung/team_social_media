@@ -5,6 +5,7 @@ import com.codegym.socialmedia.dto.post.PostCreateDto;
 import com.codegym.socialmedia.dto.post.PostDisplayDto;
 import com.codegym.socialmedia.dto.post.PostUpdateDto;
 import com.codegym.socialmedia.model.PrivacyLevel;
+import com.codegym.socialmedia.model.account.AuthUser;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.codegym.socialmedia.model.social_action.PostComment;
@@ -220,16 +221,19 @@ public class PostController {
             postID = comment.getPost().getId();
         }
 
-        User currentUser = userService.getCurrentUser();
+        AuthUser currentUser = userService.getAuthUser();
+
         if (currentUser == null) {
             return ResponseEntity.status(401).build();
         }
+        FeedResponse posts ;
         if (postID == -1 && commentID == -1) {
-            FeedResponse posts = postFeedService.getFeed(currentUser,lastScore,size);
+            posts = postFeedService.getFeed(currentUser,lastScore,size);
             return ResponseEntity.ok(posts);
         }
 
-        PostDisplayDto postDto = postQueryService.getPostById(postID, currentUser);
+        User user = userService.getUserByUsername(currentUser.getUsername());
+        PostDisplayDto postDto = postQueryService.getPostById(postID, user);
         return ResponseEntity.ok(new FeedResponse(List.of(postDto), 0L));
     }
 

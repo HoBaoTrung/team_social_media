@@ -104,6 +104,32 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
             """)
     List<Friendship> findAllFriendshipsOfUser(@Param("userId") Long userId);
 
+    @Query(value = """
+    SELECT 
+        f.requester_id AS requesterId,
+        f.addressee_id AS addresseeId,
+        f.status
+    FROM friendships f
+    WHERE f.status = 'ACCEPTED'
+      AND (f.requester_id = :userId OR f.addressee_id = :userId)
+    """, nativeQuery = true)
+    List<FriendIdWithStatus> findFriendIdsWithStatus(@Param("userId") Long userId);
+    public interface FriendIdWithStatus {
+        Long getRequesterId();
+        Long getAddresseeId();
+        Friendship.FriendshipStatus getStatus();
+
+        default Long getFriendId(Long viewerId) {
+            Long req = getRequesterId();
+            Long add = getAddresseeId();
+            if (req == null || add == null) {
+                return req != null ? req : add;
+            }
+            return req.equals(viewerId) ? add : req;
+        }
+    }
+
+
     @Query("SELECT f FROM Friendship f " +
             "WHERE (f.requester.id = :userId AND f.addressee.id IN :otherIds) " +
             "   OR (f.addressee.id = :userId AND f.requester.id IN :otherIds)")
@@ -195,6 +221,45 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
     List<User> findFriendsByKeyword(@Param("currentUserId") Long currentUserId,
                                     @Param("keyword") String keyword);
 
+    // Batch query: Count mutual friends for multiple users at once
+    @Query("""
+    SELECT u.id AS userId, COUNT(DISTINCT mf.id) AS mutualCount
+    FROM User u
+    JOIN Friendship f1 ON (f1.requester = u OR f1.addressee = u)
+    JOIN User mf ON ( (f1.requester = mf OR f1.addressee = mf) AND mf.id <> u.id )
+    WHERE u.id IN :userBIds
+      AND EXISTS (
+          SELECT 1
+          FROM Friendship fa
+          WHERE (fa.requester.id = :userAId OR fa.addressee.id = :userAId)
+            AND (fa.requester = mf OR fa.addressee = mf)
+            AND fa.status = 'ACCEPTED'
+      )
+      AND f1.status = 'ACCEPTED'
+    GROUP BY u.id
+    """)
+    List<MutualFriendsCount> countMutualFriendsForMultipleUsers(
+            @Param("userAId") Long userAId,
+            @Param("userBIds") List<Long> userBIds);
 
+    public interface MutualFriendsCount {
+        Long getUserId();
+        Long getMutualCount();
+    }
+
+    // Batch query: Get friendship status for specific users (optimized for feed)
+    @Query("""
+    SELECT
+        f.requester.id AS requesterId,
+        f.addressee.id AS addresseeId,
+        f.status
+    FROM Friendship f
+    WHERE f.status = 'ACCEPTED'
+      AND ((f.requester.id = :userId AND f.addressee.id IN :targetUserIds)
+           OR (f.addressee.id = :userId AND f.requester.id IN :targetUserIds))
+    """)
+    List<FriendIdWithStatus> findFriendshipStatusBatch(
+            @Param("userId") Long userId,
+            @Param("targetUserIds") List<Long> targetUserIds);
 
 }

@@ -38,7 +38,7 @@ public class UserSessionService {
         session.setIpAddress(request.getRemoteAddr());
         session.setUserAgent(request.getHeader("User-Agent"));
         session.setDeviceInfo(detectDevice(request.getHeader("User-Agent")));
-        session.setLoginMethod(UserSession.LoginMethod.WEB);
+        session.setLoginDevide(UserSession.LoginDevide.WEB);
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusDays(30)); // refresh token hết hạn
         session.setLastActivity(LocalDateTime.now());
@@ -62,7 +62,7 @@ public class UserSessionService {
         session.setIpAddress(request.getRemoteAddr());
         session.setUserAgent(request.getHeader("User-Agent"));
         session.setDeviceInfo(detectDevice(request.getHeader("User-Agent")));
-        session.setLoginMethod(UserSession.LoginMethod.WEB);
+        session.setLoginDevide(UserSession.LoginDevide.WEB);
         session.setCreatedAt(LocalDateTime.now());
         session.setExpiresAt(LocalDateTime.now().plusDays(30)); // refresh token hết hạn
         session.setLastActivity(LocalDateTime.now());
@@ -114,14 +114,14 @@ public class UserSessionService {
 
         // Cập nhật cookie
         addCookie(response, "jwt_token", newAccessToken, 10 * 60 * 60);
-
+        updateLastActivity(newAccessToken);
         return newAccessToken;
     }
 
     /**
-     * ✅ Cập nhật thời điểm hoạt động cuối khi người dùng truy cập
+     *  Cập nhật thời điểm hoạt động cuối khi người dùng truy cập
      */
-    public void updateLastActivity(String token) {
+    private void updateLastActivity(String token) {
         userSessionRepository.findByRefreshToken(token).ifPresent(session -> {
             // Kiểm tra hạn của token
             if (session.getExpiresAt().isAfter(LocalDateTime.now())) {

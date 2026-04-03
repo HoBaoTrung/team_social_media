@@ -32,13 +32,13 @@ public class UserSession {
     private String deviceInfo;
 
     @Enumerated(EnumType.STRING)
-    private LoginMethod loginMethod;
+    private LoginDevide loginDevide;
 
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private LocalDateTime lastActivity;
 
-    public enum LoginMethod {
+    public enum LoginDevide {
         WEB, MOBILE, TABLET
     }
 }

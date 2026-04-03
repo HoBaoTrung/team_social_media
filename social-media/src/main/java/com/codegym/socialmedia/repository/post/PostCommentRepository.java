@@ -30,18 +30,18 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
 
     // Lấy comments của post
     @Query("""
-                SELECT pc FROM PostComment pc 
-                WHERE pc.post = :post 
-                AND pc.parent IS NULL 
-                AND pc.isDeleted = false 
+                SELECT pc FROM PostComment pc
+                WHERE pc.post = :post
+                AND pc.parent IS NULL
+                AND pc.isDeleted = false
                 ORDER BY pc.createdAt ASC
             """)
     Page<PostComment> findByPostOrderByCreatedAtAsc(@Param("post") Post post, Pageable pageable);
 
     // Đếm số comments của post
     @Query("""
-                SELECT COUNT(pc) FROM PostComment pc 
-                WHERE pc.post = :post 
+                SELECT COUNT(pc) FROM PostComment pc
+                WHERE pc.post = :post
                 AND pc.isDeleted = false
             """)
     int countByPost(@Param("post") Post post);
@@ -51,10 +51,10 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
 
     // Lấy comments gần đây nhất của post
     @Query("""
-                SELECT pc FROM PostComment pc 
-                WHERE pc.post = :post 
-                AND pc.parent IS NULL 
-                AND pc.isDeleted = false 
+                SELECT pc FROM PostComment pc
+                WHERE pc.post = :post
+                AND pc.parent IS NULL
+                AND pc.isDeleted = false
                 ORDER BY pc.createdAt DESC
             """)
     Page<PostComment> findRecentCommentsByPost(@Param("post") Post post, Pageable pageable);
@@ -63,4 +63,11 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
 
     List<PostComment> findByParent(PostComment parent);
 
+    // Batch query: Count comments for multiple posts
+    @Query("SELECT pc.post.id AS postId, COUNT(pc.id) AS commentCount " +
+            "FROM PostComment pc " +
+            "WHERE pc.post.id IN :postIds " +
+            "AND pc.isDeleted = false " +
+            "GROUP BY pc.post.id")
+    List<CommentCountProjection> countByPostIdsOptimized(@Param("postIds") List<Long> postIds);
 }

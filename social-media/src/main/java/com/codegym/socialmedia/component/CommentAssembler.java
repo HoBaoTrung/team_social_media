@@ -107,8 +107,8 @@ public class CommentAssembler {
              canReply = currentUser != null && (
                     currentUser.isAdmin() ||
                             privacyPolicyResolver.canView(
-                                    currentUser,
-                                    p,
+                                    currentUser.getId(),
+                                    p.getUser().getId(),
                                     p.getPrivacyCommentLevel(),
                                     isFriend
                             )

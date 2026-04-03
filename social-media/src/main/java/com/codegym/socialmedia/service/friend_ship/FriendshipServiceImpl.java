@@ -156,9 +156,23 @@ public class FriendshipServiceImpl implements FriendshipService {
     private Page<FriendDto> getFriendsPage(Long targetUserId, Long viewerId, Pageable pageable) {
         Page<User> friendsPage = friendshipRepository.findFriendsOfUserExcludingViewer(targetUserId, viewerId, pageable);
 
+        List<Long> friendIds = friendsPage.getContent().stream()
+                .filter(user -> !user.getId().equals(viewerId))
+                .map(User::getId)
+                .collect(Collectors.toList());
+
+        // Batch query: Get mutual friends count for all users in one query (Fix N+1)
+        Map<Long, Long> mutualFriendsCountMap = friendshipRepository
+                .countMutualFriendsForMultipleUsers(viewerId, friendIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        FriendshipRepository.MutualFriendsCount::getUserId,
+                        FriendshipRepository.MutualFriendsCount::getMutualCount
+                ));
+
         List<FriendDto> friendDtos = friendsPage.getContent().stream()
-                .filter(user -> !user.getId().equals(viewerId)) // Loại bỏ viewer khỏi danh sách
-                .map(user -> new FriendDto(user, countMutualFriends(user.getId(), viewerId)))
+                .filter(user -> !user.getId().equals(viewerId))
+                .map(user -> new FriendDto(user, mutualFriendsCountMap.getOrDefault(user.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
 
         return new PageImpl<>(friendDtos, pageable, friendsPage.getTotalElements());
@@ -184,8 +198,23 @@ public class FriendshipServiceImpl implements FriendshipService {
         Pageable pageable = PageRequest.of(page, size);
         Page<User> mutualFriendsPage = friendshipRepository.findMutualFriends(userAId, userBId, pageable);
         long currentUserID = userService.getCurrentUser().getId();
+
+        List<Long> mutualFriendIds = mutualFriendsPage.getContent().stream()
+                .map(User::getId)
+                .collect(Collectors.toList());
+
+        // Batch query: Get mutual friends count for all users in one query (Fix N+1)
+        Map<Long, Long> mutualFriendsCountMap = mutualFriendIds.isEmpty() ?
+                Collections.emptyMap() :
+                friendshipRepository.countMutualFriendsForMultipleUsers(currentUserID, mutualFriendIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                FriendshipRepository.MutualFriendsCount::getUserId,
+                                FriendshipRepository.MutualFriendsCount::getMutualCount
+                        ));
+
         List<FriendDto> friendDtos = mutualFriendsPage.getContent().stream()
-                .map(user -> new FriendDto(user, countMutualFriends(currentUserID, user.getId())))
+                .map(user -> new FriendDto(user, mutualFriendsCountMap.getOrDefault(user.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
 
         return new PageImpl<>(friendDtos, pageable, mutualFriendsPage.getTotalElements());
@@ -223,8 +252,22 @@ public class FriendshipServiceImpl implements FriendshipService {
         Pageable pageable = PageRequest.of(page, size);
         Page<User> nonFriendsPage = friendshipRepository.findNonFriends(currentUserId, pageable);
 
+        List<Long> nonFriendIds = nonFriendsPage.getContent().stream()
+                .map(User::getId)
+                .collect(Collectors.toList());
+
+        // Batch query: Get mutual friends count for all users in one query (Fix N+1)
+        Map<Long, Long> mutualFriendsCountMap = nonFriendIds.isEmpty() ?
+                Collections.emptyMap() :
+                friendshipRepository.countMutualFriendsForMultipleUsers(currentUserId, nonFriendIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                FriendshipRepository.MutualFriendsCount::getUserId,
+                                FriendshipRepository.MutualFriendsCount::getMutualCount
+                        ));
+
         List<FriendDto> friendDtos = nonFriendsPage.getContent().stream()
-                .map(user -> new FriendDto(user, countMutualFriends(currentUserId, user.getId())))
+                .map(user -> new FriendDto(user, mutualFriendsCountMap.getOrDefault(user.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
 
         return new PageImpl<>(friendDtos, pageable, nonFriendsPage.getTotalElements());
@@ -235,8 +278,22 @@ public class FriendshipServiceImpl implements FriendshipService {
         Pageable pageable = PageRequest.of(page, size);
         Page<User> sentRequestsPage = friendshipRepository.findSentFriendRequests(currentUserId, pageable);
 
+        List<Long> requestUserIds = sentRequestsPage.getContent().stream()
+                .map(User::getId)
+                .collect(Collectors.toList());
+
+        // Batch query: Get mutual friends count for all users in one query (Fix N+1)
+        Map<Long, Long> mutualFriendsCountMap = requestUserIds.isEmpty() ?
+                Collections.emptyMap() :
+                friendshipRepository.countMutualFriendsForMultipleUsers(currentUserId, requestUserIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                FriendshipRepository.MutualFriendsCount::getUserId,
+                                FriendshipRepository.MutualFriendsCount::getMutualCount
+                        ));
+
         List<FriendDto> friendDtos = sentRequestsPage.getContent().stream()
-                .map(user -> new FriendDto(user, countMutualFriends(currentUserId, user.getId())))
+                .map(user -> new FriendDto(user, mutualFriendsCountMap.getOrDefault(user.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
 
         return new PageImpl<>(friendDtos, pageable, sentRequestsPage.getTotalElements());
@@ -247,8 +304,22 @@ public class FriendshipServiceImpl implements FriendshipService {
         Pageable pageable = PageRequest.of(page, size);
         Page<User> receivedRequestsPage = friendshipRepository.findReceivedFriendRequests(currentUserId, pageable);
 
+        List<Long> requestUserIds = receivedRequestsPage.getContent().stream()
+                .map(User::getId)
+                .collect(Collectors.toList());
+
+        // Batch query: Get mutual friends count for all users in one query (Fix N+1)
+        Map<Long, Long> mutualFriendsCountMap = requestUserIds.isEmpty() ?
+                Collections.emptyMap() :
+                friendshipRepository.countMutualFriendsForMultipleUsers(currentUserId, requestUserIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                FriendshipRepository.MutualFriendsCount::getUserId,
+                                FriendshipRepository.MutualFriendsCount::getMutualCount
+                        ));
+
         List<FriendDto> friendDtos = receivedRequestsPage.getContent().stream()
-                .map(user -> new FriendDto(user, countMutualFriends(currentUserId, user.getId())))
+                .map(user -> new FriendDto(user, mutualFriendsCountMap.getOrDefault(user.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
 
         return new PageImpl<>(friendDtos, pageable, receivedRequestsPage.getTotalElements());

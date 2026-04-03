@@ -22,7 +22,7 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -63,5 +63,4 @@ public class Post {
         return "[id: " + id + ", content: " + content + "]";
     }
 
-    public Long getOwnerId(){return this.user.getId();}
 }

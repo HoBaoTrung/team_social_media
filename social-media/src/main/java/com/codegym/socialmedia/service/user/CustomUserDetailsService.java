@@ -1,13 +1,18 @@
 package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.ErrAccountException;
+import com.codegym.socialmedia.model.account.AuthUser;
+import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.repository.user.IUserRepository;
+import com.codegym.socialmedia.repository.user.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
@@ -15,15 +20,25 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Autowired
     private IUserRepository userRepository;
 
+    @Autowired
+    private RoleRepository roleRepository;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = null;
-        user = userRepository.findByEmail(username);
-        if (user == null) user = userRepository.findByUsername(username);
+        IUserRepository.AuthUserProjection proj = userRepository.findAuthUserData(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng: " + username));
+        Set<Role> roles = roleRepository.findRolesByUsernameOrEmail(username);
 
-        if (user == null) {
-            throw new UsernameNotFoundException("Không tìm thấy người dùng với tên đăng nhập hoặc email: " + username);
-        }
+        AuthUser user = new AuthUser(
+                proj.getId(),
+                proj.getUsername(),
+                proj.getPassword(),
+                proj.getIsActive(),
+                proj.getAccountStatus(),
+                proj.getAvatar(),
+                proj.getFullName(),
+                roles
+        );
 
         // Kiểm tra trạng thái tài khoản
         if (!user.isActive()) {

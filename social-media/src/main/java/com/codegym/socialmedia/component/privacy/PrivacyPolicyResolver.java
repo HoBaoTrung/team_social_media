@@ -1,14 +1,14 @@
 package com.codegym.socialmedia.component.privacy;
 
 import com.codegym.socialmedia.model.PrivacyLevel;
-import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.model.social_action.Post;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 @Component
 public class PrivacyPolicyResolver {
 
@@ -22,32 +22,39 @@ public class PrivacyPolicyResolver {
                 ));
     }
 
-    // for post
     public boolean canView(
-            User viewer,
-            Post post,
+            long viewerId,
+            long ownerId,
             PrivacyLevel level,
             boolean isFriend
     ) {
-        User owner = post.getUser();
-        if (viewer == null || owner == null || level == null) return false;
-        if (viewer.getId().equals(owner.getId())) return true;
-
-        PrivacyPolicy policy = policyMap.get(level);
-        return policy != null && policy.canView(viewer, post, isFriend);
+        return canView(viewerId, ownerId, level, isFriend, Set.of(), Set.of(), Set.of());
     }
 
-    // for profile
     public boolean canView(
-            User viewer,
-            User owner,
+            long viewerId,
+            long ownerId,
             PrivacyLevel level,
-            boolean isFriend
+            boolean isFriend,
+            Set<Long> friendIds,
+            Set<Long> excludedUserIds,
+            Set<Long> specificFriendIds
     ) {
-        if (viewer == null || owner == null || level == null) return false;
-        if (viewer.getId().equals(owner.getId())) return true;
+        if (level == null) return false;
+        if (viewerId == ownerId) return true;
+        if (viewerId == -1L) return false;
+
+        PrivacyContext context = new PrivacyContext(
+                viewerId,
+                ownerId,
+                isFriend,
+                friendIds,
+                excludedUserIds,
+                specificFriendIds
+        );
 
         PrivacyPolicy policy = policyMap.get(level);
-        return policy != null && policy.canView(isFriend);
+        return policy != null && policy.canView(context);
     }
 }
+

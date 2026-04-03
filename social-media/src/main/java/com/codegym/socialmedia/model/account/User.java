@@ -4,9 +4,11 @@ import com.codegym.socialmedia.general_interface.NormalRegister;
 import com.codegym.socialmedia.model.admin.ModerationLog;
 import com.codegym.socialmedia.model.conversation.ConversationParticipant;
 import com.codegym.socialmedia.model.social_action.*;
+import com.nimbusds.openid.connect.sdk.claims.Gender;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -15,12 +17,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class User {
 
     @Id
@@ -28,7 +29,6 @@ public class User {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    @NotBlank
     private String username;
 
     @Column(nullable = false, unique = true)
@@ -39,13 +39,8 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    @Size(max = 50)
     private String firstName;
-
-    @Size(max = 50)
     private String lastName;
-
-    @Size(max = 255)
     private String profilePicture;
 
     @Lob
@@ -74,7 +69,6 @@ public class User {
     private LocalDateTime updatedAt;
 
     private boolean isActive = true;
-
     private boolean isVerified = false;
 
     @Enumerated(EnumType.STRING)
@@ -82,55 +76,25 @@ public class User {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "users_roles",
-            joinColumns = {@JoinColumn(name = "user_id")},
-            inverseJoinColumns = {@JoinColumn(name = "role_id")})
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @BatchSize(size = 20)
     private Set<Role> roles;
 
-    @OneToMany(mappedBy = "user")
-    private List<UserSearchHistory> searchesPerformed;
-
-    @OneToMany(mappedBy = "resultUser")
-    private List<UserSearchHistory> searchesFoundIn;
-
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    @JoinColumn(name = "privacy_settings_id")
     private UserPrivacySettings privacySettings;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    @JoinColumn(name = "notification_settings_id")
     private NotificationSettings notificationSettings;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<UserSession> sessions;
-
-    @OneToMany(mappedBy = "requester")
-    private List<Friendship> sentFriendRequests;
-
-    @OneToMany(mappedBy = "addressee")
-    private List<Friendship> receivedFriendRequests;
-
-    @OneToMany(mappedBy = "user")
-    private List<LikePost> likedStatuses;
-
-    @OneToMany(mappedBy = "user")
-    private List<LikeComment> likedComments;
-
-    @OneToMany(mappedBy = "user")
-    private List<ConversationParticipant> conversations;
-
-    @OneToMany(mappedBy = "blocker")
-    private List<BlockedUsers> blockedUsers;
-
-    @OneToMany(mappedBy = "blocked")
-    private List<BlockedUsers> blockedBy;
-
-    @OneToMany(mappedBy = "reporter")
-    private List<ModerationLog> reports;
-
-    public enum Gender {
-        MALE, FEMALE, OTHER
-    }
 
     public enum LoginMethod {
         EMAIL, FACEBOOK, GOOGLE
+    }
+
+    public enum Gender {
+        MALE, FEMALE, OTHER
     }
 
     public enum AccountStatus {
@@ -138,30 +102,22 @@ public class User {
     }
 
 
-    @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                '}';
-    }
 
     public boolean isAdmin() {
-        return this.roles.stream()
-                .anyMatch(role -> "ROLE_ADMIN".equals(role.getName()));
+        return roles != null &&
+                roles.stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName()));
     }
 
     public String getFullName() {
-        return firstName + " " + lastName;
+        return (firstName == null ? "" : firstName) + " " +
+                (lastName == null ? "" : lastName);
     }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof User)) return false;
-        User other = (User) o;
-        return id != null && id.equals(other.id);
+        return id != null && id.equals(((User) o).id);
     }
 
     @Override

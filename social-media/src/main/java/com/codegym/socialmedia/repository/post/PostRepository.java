@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -148,11 +149,41 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     List<Post> findTop100ByPrivacyLevelOrderByCreatedAtDesc(PrivacyLevel privacyLevel);
 
-    @Query(""" 
-                SELECT p FROM Post p JOIN FETCH p.user WHERE p.isDeleted = false and p.id IN :postIds
-            """)
-    List<Post> findByIdIn(List<Long> postIds);
+    @Query("""
+    SELECT
+        p.id AS id,
+                p.content AS content,
+                p.imageUrls AS imageUrls,
+                p.privacyLevel AS privacyLevel,
+                p.privacyCommentLevel AS privacyCommentLevel,
+                p.createdAt AS createdAt,
+                p.updatedAt AS updatedAt,
+    
+        u.id AS ownerId,
+        u.username AS ownerUsername,
+        u.profilePicture AS ownerAvatar,
+        CONCAT(u.firstName, ' ', u.lastName) AS fullname
+    FROM Post p
+    JOIN p.user u
+    WHERE p.id IN :ids AND p.isDeleted = false
+    ORDER BY p.createdAt DESC
+    """)
+    List<PostFeedProjection> findFeedPosts(List<Long> ids);
 
+    public interface PostFeedProjection {
+        Long getId();
+        String getContent();
+        String getImageUrls();
+        PrivacyLevel getPrivacyLevel();
+        PrivacyLevel getPrivacyCommentLevel();
+        LocalDateTime getCreatedAt();
+        LocalDateTime getUpdatedAt();
+
+        Long getOwnerId();
+        String getOwnerUsername();
+        String getOwnerAvatar();
+        String getFullname();
+    }
 
     // 8. Find posts by user list (for friends' posts) - THÊM METHOD NÀY
     @Query("SELECT p FROM Post p WHERE p.user IN :users AND p.isDeleted = false " +

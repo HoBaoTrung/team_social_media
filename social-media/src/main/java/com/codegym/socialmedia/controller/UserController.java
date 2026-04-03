@@ -159,27 +159,45 @@ public class UserController {
     ) {
         model.addAttribute("canViewEmail",
                 privacyPolicyResolver.canView(
-                        viewer, owner, privacy.getShowEmail(), isFriend));
+                        viewer != null ? viewer.getId() : -1L,
+                        owner.getId(),
+                        privacy.getShowEmail(),
+                        isFriend));
 
         model.addAttribute("canViewPhone",
                 privacyPolicyResolver.canView(
-                        viewer, owner, privacy.getShowPhone(), isFriend));
+                        viewer != null ? viewer.getId() : -1L,
+                        owner.getId(),
+                        privacy.getShowPhone(),
+                        isFriend));
 
         model.addAttribute("canViewDob",
                 privacyPolicyResolver.canView(
-                        viewer, owner, privacy.getShowDob(), isFriend));
+                        viewer != null ? viewer.getId() : -1L,
+                        owner.getId(),
+                        privacy.getShowDob(),
+                        isFriend));
 
         model.addAttribute("canViewBio",
                 privacyPolicyResolver.canView(
-                        viewer, owner, privacy.getShowBio(), isFriend));
+                        viewer != null ? viewer.getId() : -1L,
+                        owner.getId(),
+                        privacy.getShowBio(),
+                        isFriend));
 
         model.addAttribute("canSendMessage",
                 privacyPolicyResolver.canView(
-                        viewer, owner, privacy.getAllowSendMessage(), isFriend));
+                        viewer != null ? viewer.getId() : -1L,
+                        owner.getId(),
+                        privacy.getAllowSendMessage(),
+                        isFriend));
 
         model.addAttribute("canViewFriendList",
                 privacyPolicyResolver.canView(
-                        viewer, owner, privacy.getShowFriendList(), isFriend));
+                        viewer != null ? viewer.getId() : -1L,
+                        owner.getId(),
+                        privacy.getShowFriendList(),
+                        isFriend));
 
         model.addAttribute("allowFriendRequests",
                 privacy.isAllowFriendRequests());

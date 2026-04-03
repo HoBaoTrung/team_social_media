@@ -1,6 +1,7 @@
 package com.codegym.socialmedia.service.user;
 
 import com.codegym.socialmedia.general_interface.UserPrincipalInfo;
+import com.codegym.socialmedia.model.account.AuthUser;
 import com.codegym.socialmedia.model.account.Role;
 import com.codegym.socialmedia.model.account.User;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,39 +13,26 @@ import java.util.Collection;
 import java.util.List;
 
 public class CustomUserPrincipal implements UserDetails, UserPrincipalInfo {
-    private final User user;
+    private final AuthUser user;
     private Collection<? extends GrantedAuthority> roles;
-    public CustomUserPrincipal(User user) {
+
+
+    public CustomUserPrincipal(AuthUser user) {
         this.user = user;
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        for (Role a : user.getRoles()) {
-            authorities.add(new SimpleGrantedAuthority(a.getName()));
-        }
-        this.roles = authorities;
     }
 
-    public long getId(){
+    public Long getId() {
         return user.getId();
     }
 
     @Override
-    public String getAvatarUrl() {
-        return user.getProfilePicture();
-    }
-
-    @Override
-    public String getFullName() {
-        return user.getFirstName() + " " + user.getLastName();
-    }
-
-    @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles;
+          return this.user.getRoles();
     }
 
     @Override
     public String getPassword() {
-        return user.getPasswordHash();
+        return user.getPassword();
     }
 
     @Override
@@ -53,18 +41,8 @@ public class CustomUserPrincipal implements UserDetails, UserPrincipalInfo {
     }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
     public boolean isAccountNonLocked() {
         return user.getAccountStatus() == User.AccountStatus.ACTIVE;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
     }
 
     @Override
@@ -72,12 +50,37 @@ public class CustomUserPrincipal implements UserDetails, UserPrincipalInfo {
         return user.isActive();
     }
 
-    public User getUser() {
+
+
+    @Override
+    public String getAvatarUrl() {
+        return user.getAvatar();
+    }
+
+    @Override
+    public String getFullName() {
+        return user.getFullName();
+    }
+
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+
+    public AuthUser getUser() {
         return user;
     }
 
 
-    public String getName(){
+    public String getName() {
         return user.getUsername();
     }
 }

@@ -24,6 +24,11 @@ public class UserPrivacySettings {
     @JoinColumn(name = "user_id")
     private User user;
 
+    public UserPrivacySettings(User user) {
+        this.user = user;
+        this.id = user.getId();
+    }
+
 
     // Quyền xem các thông tin cá nhân
     @Enumerated(EnumType.STRING)

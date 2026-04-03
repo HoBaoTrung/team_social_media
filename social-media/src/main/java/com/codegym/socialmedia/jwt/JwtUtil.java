@@ -48,8 +48,8 @@ public class JwtUtil {
                 .getBody();
     }
 
-    public boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    private boolean isTokenNotExpired(String token) {
+        return extractExpiration(token).after(new Date());
     }
 
     public String generateToken(String username) {
@@ -65,7 +65,7 @@ public class JwtUtil {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
-            return true;
+            return isTokenNotExpired(token);
         } catch (JwtException e) {
             return false;
         }

@@ -4,9 +4,10 @@ package com.codegym.socialmedia.service.post;
 import com.codegym.socialmedia.component.privacy.PrivacyPolicyResolver;
 import com.codegym.socialmedia.dto.post.FeedResponse;
 import com.codegym.socialmedia.dto.post.PostDisplayDto;
+import com.codegym.socialmedia.model.account.AuthUser;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Friendship;
-import com.codegym.socialmedia.model.social_action.Post;
+import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.repository.FriendshipRepository;
 import com.codegym.socialmedia.repository.post.PostCommentRepository;
 import com.codegym.socialmedia.repository.post.PostLikeRepository;
@@ -31,12 +32,12 @@ public class PostFeedServiceImpl implements PostFeedService {
     private final RedisFeedService redisFeedService;
     private final PostRepository postRepository;
     private final PostCommentRepository postCommentRepository;
-    private final FriendshipService friendshipService;
     private final PrivacyPolicyResolver privacyPolicyResolver;
     private final PostMapper postMapper;
     private final FriendshipRepository friendshipRepository;
+
     @Override
-    public FeedResponse getFeed(User currentUser, Long lastScore, int size) {
+    public FeedResponse getFeed(AuthUser currentUser, Long lastScore, int size) {
 
         Long viewerId = currentUser.getId();
         if (lastScore == null) {
@@ -50,69 +51,88 @@ public class PostFeedServiceImpl implements PostFeedService {
             return new FeedResponse(List.of(), null);
         }
 
-        final List<Long> friendIds = friendshipRepository.findAllFriendshipsOfUser(viewerId)
-                .stream()
-                .map(f -> f.getRequester().getId().equals(viewerId)
-                        ? f.getAddressee().getId()
-                        : f.getRequester().getId())
-                .toList();
-        Set<Long> friendIdSet = new HashSet<>(friendIds);
-        Map<Long, Friendship.FriendshipStatus> friendshipMap = friendIds.stream()
-                .collect(Collectors.toMap(
-                        id -> id,
-                        id -> Friendship.FriendshipStatus.ACCEPTED
-                ));
-//        List<Post> visiblePosts = postRepository.findVisiblePostsByIds(viewerId, mergedIds, friendIds);
-        List<Post> visiblePosts = postRepository.findByIdIn(mergedIds);
+        List<PostRepository.PostFeedProjection> visiblePosts = postRepository.findFeedPosts(mergedIds);
 
-        visiblePosts = visiblePosts.stream()
-                .filter(post -> privacyPolicyResolver.canView(
-                        currentUser,
-                        post,
-                        post.getPrivacyLevel(),
-                        friendIdSet.contains(post.getOwnerId())
-                        ))
+        Set<Long> ownerIdsToCheck = visiblePosts.stream()
+                .map(PostRepository.PostFeedProjection::getOwnerId)
+                .filter(ownerId -> !ownerId.equals(viewerId))   // không cần check bản thân
+                .collect(Collectors.toSet());
+
+        List<Long> ownerIdsList = new ArrayList<>(ownerIdsToCheck);
+
+        Map<Long, Friendship.FriendshipStatus> friendshipMap = friendshipRepository
+                .findFriendshipStatusBatch(viewerId, ownerIdsList)
+                .stream()
+                .collect(Collectors.toMap(
+                        f -> {
+                            return f.getFriendId(viewerId);
+                        },
+                        FriendshipRepository.FriendIdWithStatus::getStatus,
+                        (oldValue, newValue) -> oldValue
+                ));
+
+        List<PostRepository.PostFeedProjection> filteredPosts = visiblePosts.stream()
+                .filter(projection -> {
+
+                    Long ownerId = projection.getOwnerId();
+
+                    // Luôn cho xem bài của chính mình
+                    if (ownerId.equals(viewerId)) {
+                        return true;
+                    }
+
+                    // Admin xem tất cả
+                    if (currentUser.isAdmin()) {
+                        return true;
+                    }
+
+                    boolean isView = privacyPolicyResolver.canView(
+                            viewerId,
+                            ownerId,
+                            projection.getPrivacyLevel(),
+                            friendshipMap.getOrDefault(ownerId, Friendship.FriendshipStatus.NONE)
+                                    == Friendship.FriendshipStatus.ACCEPTED
+                    );
+                    return  isView;
+
+                })
                 .collect(Collectors.toList());
 
 
-        Map<Long, Post> postMap = visiblePosts.stream()
-                .collect(Collectors.toMap(Post::getId, Function.identity()));
+        Map<Long, PostRepository.PostFeedProjection> postMap = filteredPosts.stream()
+                .collect(Collectors.toMap(PostRepository.PostFeedProjection::getId, Function.identity()));
 
-        List<Post> sortedPosts = new ArrayList<>();
-        List<Long> postOwnerIds = new ArrayList<>();
-
-        mergedIds.stream()
+        List<PostRepository.PostFeedProjection> sortedPosts = mergedIds.stream()
                 .map(postMap::get)
                 .filter(Objects::nonNull)
                 .limit(size)
-                .forEach(post -> {
-                    sortedPosts.add(post);
-                    postOwnerIds.add(post.getOwnerId());
-                });
+                .toList();
 
-        Set<Long> likedPostIds = postLikeRepository.findLikedPostIdsByUser(viewerId, mergedIds);
+        List<Long> sortedPostIds = sortedPosts.stream()
+                .map(PostRepository.PostFeedProjection::getId)
+                .collect(Collectors.toList());
 
-        Map<Long, Integer> likeCountMap = postLikeRepository.countByPostIds(mergedIds)
+        // Step 4: Batch fetch likes and comments
+        Set<Long> likedPostIds = postLikeRepository.findLikedPostIdsByUser(viewerId, sortedPostIds);
+
+        Map<Long, Integer> likeCountMap = postLikeRepository.countByPostIds(sortedPostIds)
                 .stream()
                 .collect(Collectors.toMap(
                         PostLikeRepository.LikeCountProjection::getPostId,
                         proj -> proj.getLikeCount().intValue()
                 ));
 
-        Map<Long, Integer> commentCountMap = postCommentRepository.countByPostIds(mergedIds)
+        Map<Long, Integer> commentCountMap = postCommentRepository.countByPostIds(sortedPostIds)
                 .stream()
                 .collect(Collectors.toMap(
                         PostCommentRepository.CommentCountProjection::getPostId,
                         proj -> proj.getCommentCount().intValue()
                 ));
 
-//        Map<Long, Friendship.FriendshipStatus> friendshipMap =
-//                friendshipService.getFriendshipMap(currentUser, postOwnerIds);
-
         List<PostDisplayDto> dtos = sortedPosts.stream()
-                .map(post -> {
-                    Long postId = post.getId();
-                    Long ownerId = post.getUser().getId();
+                .map(postFeedProjection -> {
+                    Long postId = postFeedProjection.getId();
+                    Long ownerId = postFeedProjection.getOwnerId();
 
                     boolean isLiked = likedPostIds.contains(postId);
                     int likeCount = likeCountMap.getOrDefault(postId, 0);
@@ -125,16 +145,18 @@ public class PostFeedServiceImpl implements PostFeedService {
                     boolean canDelete = canEdit;
 
                     boolean canComment = currentUser.isAdmin() ||
-                            privacyPolicyResolver.canView(currentUser, post.getUser(),
-                                    post.getPrivacyCommentLevel(), isFriend);
+                            privacyPolicyResolver.canView(
+                                    viewerId,
+                                    ownerId,
+                                    postFeedProjection.getPrivacyCommentLevel(),
+                                    isFriend
+                            );
 
-                    return postMapper.toDisplayDto(post, isLiked, likeCount, commentCount,
+                    return postMapper.toDisplayDto(postFeedProjection, isLiked, likeCount, commentCount,
                             canComment, canEdit, canDelete);
                 })
                 .toList();
 
-
-        // Next cursor
         Long nextCursor = sortedPosts.isEmpty() ? null :
                 sortedPosts.get(sortedPosts.size() - 1)
                         .getCreatedAt()

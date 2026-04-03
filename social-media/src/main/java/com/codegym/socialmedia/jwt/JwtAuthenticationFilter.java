@@ -45,22 +45,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
+        String path = request.getRequestURI();
+
+        // Bỏ qua hoàn toàn việc kiểm tra token cho các endpoint public
+        if (path.startsWith("/api/auth/") ||
+                path.equals("/login") ||
+                path.equals("/register") ||
+                path.startsWith("/css/") ||
+                path.startsWith("/js/") ||
+                path.startsWith("/images/") ||
+                path.startsWith("/webjars/")){
+
+            filterChain.doFilter(request, response);  // tiếp tục ngay, không làm gì cả
+            return;
+        }
 
         try {
             String accessToken = extractAccessToken(request);
             String refreshToken = extractRefreshToken(request);
 
-            if (accessToken != null) {
-
-                if (isValidToken(accessToken)) {
-                    handleValidToken(accessToken, refreshToken, request);
-                } else if (jwtUtil.isTokenExpired(accessToken)) {
-                    handleExpiredToken(refreshToken, request, response);
-                } else {
-                    handleInvalidToken(request, response, "Invalid token");
-                    return;
-                }
+            if (isValidToken(accessToken) == false) {
+                handleExpiredToken(refreshToken, request, response);return;
             }
+            else authenticateUser(accessToken, request);
+
 
         } catch (Exception e) {
             logger.error("Authentication error occurred", e);
@@ -71,21 +79,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-
-    private void handleValidToken(String token, String refreshToken, HttpServletRequest request) {
-
-        if (tokenBlacklistService.isTokenBlacklisted(token)) {
-            logger.warn("Blacklisted token attempted to be used");
-            throw new RuntimeException("Token is blacklisted");
-        }
-
-        authenticateUser(token, request);
-
-        // update session if refresh token exists
-        if (refreshToken != null) {
-            userSessionService.updateLastActivity(refreshToken);
-        }
-    }
 
     private void handleExpiredToken(String refreshToken,
                                     HttpServletRequest request,
@@ -111,9 +104,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         handleUnauthorized(request, response, message);
     }
 
-    // =========================
-    // 🔑 AUTHENTICATION CORE
-    // =========================
 
     private void authenticateUser(String token, HttpServletRequest request) {
         String username = jwtUtil.extractUsername(token);
@@ -136,9 +126,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private boolean isValidToken(String token) {
+        if (token == null || tokenBlacklistService.isTokenBlacklisted(token) ) {
+            return false;
+        }
         return jwtUtil.validateToken(token);
     }
-
 
 
     private String extractAccessToken(HttpServletRequest request) {

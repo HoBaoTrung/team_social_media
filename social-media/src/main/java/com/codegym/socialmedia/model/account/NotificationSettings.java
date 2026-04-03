@@ -20,6 +20,11 @@ public class NotificationSettings {
     @JoinColumn(name = "user_id")
     private User user;
 
+    public NotificationSettings(User user) {
+        this.user = user;
+        this.id = user.getId();
+    }
+
     private boolean friendRequests = true;
     private boolean messages = true;
     private boolean statusLikes = true;

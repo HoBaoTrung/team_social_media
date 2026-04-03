@@ -41,10 +41,6 @@ public class RedisFeedService {
         return String.format(AUTHOR_FEED_KEY, authorId);
     }
 
-    /* =========================
-       GET FEED IDS
-     ========================= */
-
     public List<Long> getMergedFeedIds(Long userId, Long maxScore, int size) {
 
         String userFeedKey = userKey(userId);
@@ -57,7 +53,7 @@ public class RedisFeedService {
             warmUpPublicFeed();
         }
 
-        int buffer = size * 2;
+        int buffer = size * 3;
 
         Set<ZSetOperations.TypedTuple<String>> userFeed =
                 redis.opsForZSet()
@@ -108,14 +104,11 @@ public class RedisFeedService {
 
         return merged.stream()
                 .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
-                .limit(size)
+                .limit(size*2)
                 .map(t -> Long.valueOf(t.getValue()))
                 .toList();
     }
 
-    /* =========================
-       FAN OUT (HYBRID)
-     ========================= */
 
     public void fanOutPost(Post post) {
 
@@ -175,9 +168,8 @@ public class RedisFeedService {
 
     private List<Long> getCelebrityFriends(Long userId) {
 
-        Set<Long> friendIds =
-                friendshipService.findFriendIdsOfUser(userId);
-
+        List<FriendshipRepository.FriendIdWithStatus> list =  friendshipRepository.findFriendIdsWithStatus(userId);
+        List<Long> friendIds = list.stream().map(proj -> proj.getFriendId(userId)).toList();
         return friendIds.stream()
                 .filter(id ->
                         friendshipRepository.countFriendsByUserId(id)
