@@ -76,8 +76,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             handleInvalidToken(request, response, "Authentication error");
             return;
         }
-// log ổn, không bị query dư
-        filterChain.doFilter(request, response); // bị query trả full user ở đây?
+
+        filterChain.doFilter(request, response);
     }
 
 

@@ -21,6 +21,13 @@ public interface IUserRepository extends JpaRepository<User, Long> {
 
     User findByEmail(String email);
 
+    @Query("""
+        SELECT u FROM User u
+        LEFT JOIN FETCH u.privacySettings
+        WHERE u.username = :username
+        """)
+    Optional<User> findByUsernameWithPrivacySettings(@Param("username") String username);
+
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);

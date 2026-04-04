@@ -7,6 +7,8 @@ import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.repository.user.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.util.Set;
 
 @Service
+@CacheConfig(cacheNames = "userDetails")
 public class CustomUserDetailsService implements UserDetailsService {
 
     @Autowired
@@ -24,6 +27,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private RoleRepository roleRepository;
 
     @Override
+    @Cacheable(key = "#username")
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         IUserRepository.AuthUserProjection proj = userRepository.findAuthUserData(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng: " + username));

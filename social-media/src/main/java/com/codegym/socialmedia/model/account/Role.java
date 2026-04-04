@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.List;
 
 @Entity
@@ -11,7 +13,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Role implements GrantedAuthority {
+public class Role implements GrantedAuthority, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     public Role(String role) {
         this.name=role;

@@ -2,9 +2,13 @@ package com.codegym.socialmedia.model.account;
 
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.account.Role;
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Set;
 
-public class AuthUser {
+public class AuthUser implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private  Long id;
     private  String username;

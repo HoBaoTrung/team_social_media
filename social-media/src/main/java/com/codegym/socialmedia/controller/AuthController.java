@@ -3,7 +3,6 @@ package com.codegym.socialmedia.controller;
 import com.codegym.socialmedia.dto.authen.LoginRequest;
 
 import com.codegym.socialmedia.model.account.User;
-import com.codegym.socialmedia.repository.user.IUserRepository;
 import com.codegym.socialmedia.service.user.CustomUserPrincipal;
 import com.codegym.socialmedia.service.user.UserSessionService;
 import jakarta.servlet.http.Cookie;
@@ -18,7 +17,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -30,7 +28,6 @@ import java.util.Map;
 public class AuthController {
     private final UserSessionService userSessionService;
     private final AuthenticationManager authenticationManager;
-    private final IUserRepository userRepository;
 
 
 
@@ -48,17 +45,13 @@ public class AuthController {
                     )
             );
 
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String username = userDetails.getUsername();
-
-            User user = userRepository.findByUsername(username);
-            if (user == null) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "User not found in database"));
-            }
-
+            CustomUserPrincipal userPrincipal = (CustomUserPrincipal) authentication.getPrincipal();
+            String username = userPrincipal.getUsername();
+            Long userId = userPrincipal.getId();
+            
+            // Lấy user data từ cache (CustomUserPrincipal), không query DB
             // Generate JWT
-            Map<String, String> tokens = userSessionService.createRefreshToken_AccessToken(user, httpRequest);
+            Map<String, String> tokens = userSessionService.createRefreshToken_AccessTokenFromPrincipal(userPrincipal, httpRequest);
 
             // Set refresh_token vào HttpOnly Cookie
             Cookie refreshCookie = new Cookie("refresh_token", tokens.get("refresh_token"));
@@ -71,11 +64,11 @@ public class AuthController {
             // Return response (chỉ access_token + user info)
             Map<String, Object> response = new HashMap<>();
             response.put("access_token", tokens.get("access_token"));
-            response.put("id", user.getId());
+            response.put("id", userId);
             response.put("username", username);
-            response.put("fullName", user.getFullName());
-            response.put("avatarUrl", user.getProfilePicture());
-            response.put("roles", userDetails.getAuthorities());
+            response.put("fullName", userPrincipal.getFullName());
+            response.put("avatarUrl", userPrincipal.getAvatarUrl());
+            response.put("roles", userPrincipal.getAuthorities());
 
             return ResponseEntity.ok(response);
 

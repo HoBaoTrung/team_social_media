@@ -74,6 +74,41 @@ public class UserSessionService {
         result.put("refresh_token", refreshToken);
         return result;
     }
+
+    /**
+     * Tạo token từ CustomUserPrincipal (đã cache, không query DB)
+     * Không cần load User entity, dùng proxy object với chỉ ID
+     */
+    public Map<String, String> createRefreshToken_AccessTokenFromPrincipal(CustomUserPrincipal principal, HttpServletRequest request) {
+        String username = principal.getUsername();
+        Long userId = principal.getId();
+        
+        String accessToken = jwtUtil.generateToken(username); // 10p
+        String refreshToken = UUID.randomUUID().toString();   // 30 ngày
+
+        // Tạo proxy User object chỉ có ID, không query DB
+        User userProxy = new User();
+        userProxy.setId(userId);
+
+        UserSession session = new UserSession();
+        session.setUser(userProxy);
+        session.setRefreshToken(refreshToken);
+        session.setIpAddress(request.getRemoteAddr());
+        session.setUserAgent(request.getHeader("User-Agent"));
+        session.setDeviceInfo(detectDevice(request.getHeader("User-Agent")));
+        session.setLoginDevide(UserSession.LoginDevide.WEB);
+        session.setCreatedAt(LocalDateTime.now());
+        session.setExpiresAt(LocalDateTime.now().plusDays(30));
+        session.setLastActivity(LocalDateTime.now());
+
+        userSessionRepository.save(session);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("access_token", accessToken);
+        result.put("refresh_token", refreshToken);
+        return result;
+    }
+
     public String refreshAccessTokenIfNeededForApi(String refreshToken, HttpServletResponse response) {
         Optional<UserSession> sessionOpt = userSessionRepository.findByRefreshToken(refreshToken);
         if (sessionOpt.isEmpty()) return null;

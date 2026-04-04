@@ -158,7 +158,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getUserByUsername(String username) {
-        return iUserRepository.findByUsername(username);
+        return iUserRepository.findByUsernameWithPrivacySettings(username).orElse(null);
     }
 
     @Override
