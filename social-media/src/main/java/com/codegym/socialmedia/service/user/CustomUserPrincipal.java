@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CustomUserPrincipal implements UserDetails, UserPrincipalInfo {
     private final AuthUser user;
@@ -27,7 +28,9 @@ public class CustomUserPrincipal implements UserDetails, UserPrincipalInfo {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-          return this.user.getRoles();
+        return user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -75,7 +78,7 @@ public class CustomUserPrincipal implements UserDetails, UserPrincipalInfo {
     }
 
 
-    public AuthUser getUser() {
+    public AuthUser getAuthUser() {
         return user;
     }
 

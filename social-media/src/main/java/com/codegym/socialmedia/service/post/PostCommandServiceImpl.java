@@ -8,10 +8,9 @@ import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.account.User;
 import com.codegym.socialmedia.model.social_action.Post;
 import com.codegym.socialmedia.model.social_action.PostPrivacyUser;
-import com.codegym.socialmedia.repository.FriendshipRepository;
 import com.codegym.socialmedia.repository.post.PostPrivacyUserRepository;
 import com.codegym.socialmedia.repository.post.PostRepository;
-import com.codegym.socialmedia.service.RedisFeedService;
+import com.codegym.socialmedia.service.redis.RedisFeedService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.ZoneOffset;
 import java.util.*;
 
 @Service

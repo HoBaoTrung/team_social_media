@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -107,38 +108,48 @@ public class UserServiceImpl implements UserService {
     @Override
     public AuthUser getAuthUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
+        if (auth == null || auth.getPrincipal() == null) {
             return null;
         }
 
         Object principal = auth.getPrincipal();
-        String str ="";
-        if (principal instanceof UserDetails) {
-            // Form login
-            str = ((UserDetails) principal).getUsername();
 
-        } else if (principal instanceof OAuth2User) {
-            // OAuth2 login
-            OAuth2User oauth2User = (OAuth2User) principal;
-            str = (String) oauth2User.getAttribute("email");
+        if (principal instanceof CustomUserPrincipal customPrincipal) {
+            return customPrincipal.getAuthUser();   // Trả về luôn object đã load từ filter
         }
 
-        Set<Role> roles = roleRepository.findRolesByUsernameOrEmail(str);
-        boolean isAdmin = roles != null &&
-                roles.stream().anyMatch(r -> "ROLE_ADMIN".equals(r.getName()));
+        // Fallback cho OAuth2 hoặc form login cũ (nếu có)
+        if (principal instanceof UserDetails userDetails) {
+            String username = userDetails.getUsername();
+            // Có thể load một lần nữa hoặc throw exception nếu không muốn hỗ trợ
+            return loadAuthUserByUsername(username); // method riêng nếu cần
+        }
 
-        IUserRepository.AuthUserProjection proj = this.iUserRepository.findAuthUserData(str).orElseThrow(null);
-        AuthUser user = new AuthUser(
+        if (principal instanceof OAuth2User oauth2User) {
+            String email = (String) oauth2User.getAttribute("email");
+            return loadAuthUserByUsername(email);
+        }
+
+        return null;
+    }
+
+    private AuthUser loadAuthUserByUsername(String username) {
+        IUserRepository.AuthUserProjection proj = iUserRepository.findAuthUserData(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng: " + username));
+        Set<Role> roles = roleRepository.findRolesByUsernameOrEmail(username);
+
+        return new AuthUser(
                 proj.getId(),
                 proj.getUsername(),
                 proj.getPassword(),
                 proj.getIsActive(),
                 proj.getAccountStatus(),
                 proj.getAvatar(),
-                proj.getFullName(),roles
+                proj.getFullName(),
+                roles
         );
-        return user;
     }
+
 
     @Override
     public User getUserById(Long id) {

@@ -262,4 +262,24 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Friendsh
             @Param("userId") Long userId,
             @Param("targetUserIds") List<Long> targetUserIds);
 
+
+    @Query(value = """
+SELECT f.friend_id
+FROM (
+    SELECT 
+        CASE 
+            WHEN requester_id = :userId THEN addressee_id 
+            ELSE requester_id 
+        END AS friend_id
+    FROM friendships 
+    WHERE status = 'ACCEPTED'
+      AND (requester_id = :userId OR addressee_id = :userId)
+) f
+JOIN friendships f2 
+  ON f2.status = 'ACCEPTED'
+ AND (f2.requester_id = f.friend_id OR f2.addressee_id = f.friend_id)
+GROUP BY f.friend_id
+HAVING COUNT(*) >= :threshold
+""", nativeQuery = true)
+    List<Long> findCelebrityFriendIds(Long userId, int threshold);
 }

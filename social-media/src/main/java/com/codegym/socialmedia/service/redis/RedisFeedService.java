@@ -1,4 +1,4 @@
-package com.codegym.socialmedia.service;
+package com.codegym.socialmedia.service.redis;
 
 import com.codegym.socialmedia.model.PrivacyLevel;
 import com.codegym.socialmedia.model.social_action.Post;
@@ -12,7 +12,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +31,7 @@ public class RedisFeedService {
     private final FriendshipRepository friendshipRepository;
     private final StringRedisTemplate redis;
     private final PostRepository postRepository;
-    private final FriendshipService friendshipService;
+    private final RedisFriend redisFriend;
     private String userKey(Long userId) {
         return String.format(USER_FEED_KEY, userId);
     }
@@ -104,7 +103,7 @@ public class RedisFeedService {
 
         return merged.stream()
                 .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
-                .limit(size*2)
+                .limit(size * 2)
                 .map(t -> Long.valueOf(t.getValue()))
                 .toList();
     }
@@ -130,7 +129,7 @@ public class RedisFeedService {
         if (!isCelebrity) {
 
             Set<Long> friendIds =
-                    friendshipService.findFriendIdsOfUser(ownerId);
+                    redisFriend.friends(ownerId);
 
             for (Long friendId : friendIds) {
 
@@ -164,24 +163,15 @@ public class RedisFeedService {
         trim(authorKey(ownerId));
     }
 
-    /* ========================= */
 
     private List<Long> getCelebrityFriends(Long userId) {
-
-        List<FriendshipRepository.FriendIdWithStatus> list =  friendshipRepository.findFriendIdsWithStatus(userId);
-        List<Long> friendIds = list.stream().map(proj -> proj.getFriendId(userId)).toList();
-        return friendIds.stream()
-                .filter(id ->
-                        friendshipRepository.countFriendsByUserId(id)
-                                >= CELEBRITY_THRESHOLD
-                )
-                .toList();
+        return friendshipRepository.findCelebrityFriendIds(userId, CELEBRITY_THRESHOLD);
     }
 
     private void warmUpUserFeed(Long viewerId) {
 
         Set<Long> friendIds =
-                friendshipService.findFriendIdsOfUser(viewerId);
+                redisFriend.friends(viewerId);
 
         Pageable pageable = PageRequest.of(0, 100);
 

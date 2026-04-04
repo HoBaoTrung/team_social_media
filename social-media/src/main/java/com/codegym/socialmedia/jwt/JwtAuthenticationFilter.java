@@ -1,6 +1,7 @@
 package com.codegym.socialmedia.jwt;
 
 import com.codegym.socialmedia.service.user.CustomUserDetailsService;
+import com.codegym.socialmedia.service.user.CustomUserPrincipal;
 import com.codegym.socialmedia.service.user.TokenBlacklistService;
 import com.codegym.socialmedia.service.user.UserSessionService;
 import jakarta.servlet.FilterChain;
@@ -75,8 +76,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             handleInvalidToken(request, response, "Authentication error");
             return;
         }
-
-        filterChain.doFilter(request, response);
+// log ổn, không bị query dư
+        filterChain.doFilter(request, response); // bị query trả full user ở đây?
     }
 
 
@@ -110,13 +111,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            CustomUserPrincipal principal =
+                    (CustomUserPrincipal) userDetailsService.loadUserByUsername(username);
 
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(
-                            userDetails,
+                            principal,
                             null,
-                            userDetails.getAuthorities()
+                            principal.getAuthorities()
                     );
 
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
