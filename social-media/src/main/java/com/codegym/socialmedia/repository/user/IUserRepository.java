@@ -24,6 +24,7 @@ public interface IUserRepository extends JpaRepository<User, Long> {
     @Query("""
         SELECT u FROM User u
         LEFT JOIN FETCH u.privacySettings
+        LEFT JOIN FETCH u.notificationSettings
         WHERE u.username = :username
         """)
     Optional<User> findByUsernameWithPrivacySettings(@Param("username") String username);
